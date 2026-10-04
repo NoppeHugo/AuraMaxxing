@@ -28,9 +28,7 @@ struct ResultView: View {
 
     var body: some View {
         ZStack {
-            AuraBackground(colors: [c1, c2, c1], intensity: 0.3)
-            ParticleField(colors: [c1, c2, .white], count: 40 + a.auraScore / 15, speed: 0.6 + Double(a.auraScore) / 1000)
-                .ignoresSafeArea()
+            AuraBackground(colors: [c1], intensity: 0.45)
 
             ScrollView {
                 VStack(spacing: 18) {
@@ -56,41 +54,37 @@ struct ResultView: View {
     // MARK: - Sections
 
     private var hero: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             if let peak {
+                // Photo du pic d'aura : cadre plein + ombre décalée en aplat (façon affiche).
                 Image(uiImage: peak)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 200, height: 266)
-                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(LinearGradient(colors: [c1, c2], startPoint: .top, endPoint: .bottom), lineWidth: 3))
-                    .shadow(color: pulse ? c2 : c1, radius: pulse ? 50 : 28)
-                    .scaleEffect(pulse ? 1.02 : 1)
-                    .onAppear {
-                        withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { pulse = true }
-                    }
+                    .frame(width: 196, height: 260)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(c1, lineWidth: 4))
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(c2).offset(x: 10, y: 10))
+                    .rotationEffect(.degrees(pulse ? -2 : 0))
+                    .onAppear { withAnimation(.spring(response: 0.5, dampingFraction: 0.5).delay(0.2)) { pulse = true } }
+                    .padding(.bottom, 10)
             }
-            Text("Pic d'aura : \(a.peakMoment)")
-                .font(.caption).foregroundStyle(Color.auraMuted)
+            Text("Pic d'aura : \(a.peakMoment)").eyebrow()
                 .multilineTextAlignment(.center)
 
             CountingText(value: a.auraScore)
-                .foregroundStyle(LinearGradient(colors: [c1, .white, c2], startPoint: .leading, endPoint: .trailing))
-                .shadow(color: c1.opacity(0.6), radius: 20)
-            Text("points d'aura").font(.subheadline).foregroundStyle(Color.auraMuted).offset(y: -10)
+                .foregroundStyle(.white)
+                .padding(.bottom, -18)
+            Rectangle().fill(c1).frame(width: 120, height: 6)
+            Text("Points d'aura").eyebrow()
 
             if stage >= 1 {
-                Text("\(a.emoji) \(a.tier.uppercased())")
-                    .font(.system(size: 15, weight: .black))
-                    .kerning(1.5)
-                    .foregroundStyle(Color.auraBackground)
-                    .padding(.horizontal, 18).padding(.vertical, 9)
-                    .background(LinearGradient(colors: [c1, c2], startPoint: .leading, endPoint: .trailing), in: Capsule())
-                    .transition(.scale(scale: 0.2).combined(with: .opacity))
-                Text(a.title).font(.title2.weight(.heavy)).multilineTextAlignment(.center)
+                StickerLabel(text: a.tier, fill: c1, angle: -4)
+                    .scaleEffect(1.3)
+                    .padding(.vertical, 8)
+                    .transition(.scale(scale: 2.5).combined(with: .opacity))
+                Text(a.title.uppercased()).font(.display(30)).multilineTextAlignment(.center)
                 if result.isRecord {
-                    Text("🚀 Nouveau record perso !").font(.headline).foregroundStyle(Color.auraGold)
+                    StickerLabel(text: "Nouveau record perso", fill: .auraGold, angle: 2)
                 }
             }
         }
@@ -103,14 +97,14 @@ struct ResultView: View {
                     .foregroundStyle(Color.auraRed)
             } else {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("+\(result.video.points)").font(.system(size: 40, weight: .black, design: .rounded))
-                    Text("pts de ligue").foregroundStyle(Color.auraMuted)
+                    Text("+\(result.video.points)").font(.display(48))
+                    Text("pts de ligue").eyebrow()
                     Spacer()
                     rankChange
                 }
                 HStack(spacing: 8) {
-                    if result.video.themeMatch { chip("⚡ Thème du jour +25 %", .auraGold) }
-                    if result.video.streakBonus > 0 { chip("🔥 Série +\(Int(result.video.streakBonus * 100)) %", .auraPink) }
+                    if result.video.themeMatch { StickerLabel(text: "Thème du jour +25 %", fill: .auraGold, angle: 0) }
+                    if result.video.streakBonus > 0 { StickerLabel(text: "Série +\(Int(result.video.streakBonus * 100)) %", fill: .auraPink, angle: 0) }
                 }
                 Text(result.counted
                      ? "Cette vidéo compte dans ton top 3 de la semaine (\(result.weekPoints) pts au total)."
@@ -128,7 +122,7 @@ struct ResultView: View {
                 if result.rankAfter < before {
                     Image(systemName: "arrow.up").foregroundStyle(Color.auraGreen)
                 }
-                Text("#\(result.rankAfter)").font(.title3.weight(.black))
+                Text("#\(result.rankAfter)").font(.display(30))
             }
             Text("sur \(result.lobbySize)").font(.caption).foregroundStyle(Color.auraMuted)
         }
@@ -137,22 +131,27 @@ struct ResultView: View {
     private var details: some View {
         VStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Stats").font(.headline)
-                StatBarsView(stats: a.stats, colors: [c1, c2])
+                Text("Stats").eyebrow()
+                StatBarsView(stats: a.stats, colors: [c1])
             }
             .auraCard()
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Trends détectées").font(.headline)
+                Text("Trends détectées").eyebrow()
                 FlowChips(items: a.trends.map { "\($0.name) · \($0.confidence) %" })
-                quote("🔥 HYPE", a.hype)
-                quote("💀 ROAST", a.roast)
+                quote("Hype", a.hype)
+                quote("Roast", a.roast)
             }
             .auraCard()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Pour gagner +aura").font(.headline)
-                ForEach(a.tips, id: \.self) { Label($0, systemImage: "arrow.up.right.circle.fill") }
+                Text("Pour gagner +aura").eyebrow()
+                ForEach(Array(a.tips.enumerated()), id: \.offset) { i, tip in
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("\(i + 1)").font(.display(22)).foregroundStyle(c1)
+                        Text(tip)
+                    }
+                }
             }
             .auraCard()
         }
@@ -165,7 +164,7 @@ struct ResultView: View {
                 ShareLink(item: revealURL, preview: SharePreview("Mon aura : \(a.auraScore)")) {
                     Label("Poster ma vidéo d'aura", systemImage: "paperplane.fill")
                 }
-                .buttonStyle(GlowButtonStyle(colors: [c1, c2]))
+                .buttonStyle(GlowButtonStyle(colors: [c1], textColor: .readable(onHex: a.auraColor)))
                 .simultaneousGesture(TapGesture().onEnded { Analytics.track(.revealShared) })
             } else {
                 Button {
@@ -177,7 +176,7 @@ struct ResultView: View {
                         Label("Créer ma vidéo d'aura", systemImage: "film.stack")
                     }
                 }
-                .buttonStyle(GlowButtonStyle(colors: [c1, c2]))
+                .buttonStyle(GlowButtonStyle(colors: [c1], textColor: .readable(onHex: a.auraColor)))
                 .disabled(exporting)
             }
 
@@ -215,14 +214,12 @@ struct ResultView: View {
 
     private func challengeCard(_ outcome: ChallengeOutcome) -> some View {
         VStack(spacing: 6) {
-            Text(outcome.won ? "⚔️ DÉFI GAGNÉ" : "⚔️ DÉFI PERDU")
-                .font(.caption.weight(.heavy)).kerning(1.5)
-                .foregroundStyle(outcome.won ? Color.auraGold : Color.auraMuted)
+            Text(outcome.won ? "Défi gagné" : "Défi perdu").eyebrow(outcome.won ? .auraGold : .auraMuted)
             Text(outcome.won ? "T'as battu @\(outcome.opponent) !" : "@\(outcome.opponent) garde la couronne… pour l'instant")
                 .font(.title3.weight(.heavy)).multilineTextAlignment(.center)
-            Text("\(outcome.myScore) vs \(outcome.opponentScore)")
-                .font(.system(size: 30, weight: .black, design: .rounded)).monospacedDigit()
-            Text(outcome.won ? "Envoie-lui ta vidéo d'aura 😏" : "Tu peux retenter avec une autre vidéo pendant 72 h.")
+            Text("\(outcome.myScore) — \(outcome.opponentScore)")
+                .font(.display(40)).monospacedDigit()
+            Text(outcome.won ? "Envoie-lui ta vidéo d'aura." : "Tu peux retenter avec une autre vidéo pendant 72 h.")
                 .font(.footnote).foregroundStyle(Color.auraMuted)
         }
         .frame(maxWidth: .infinity)
@@ -265,17 +262,9 @@ struct ResultView: View {
 
     // MARK: - Helpers
 
-    private func chip(_ text: String, _ color: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.heavy))
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .foregroundStyle(color)
-            .background(color.opacity(0.15), in: Capsule())
-    }
-
     private func quote(_ label: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption.weight(.heavy)).kerning(1).foregroundStyle(Color.auraMuted)
+            Text(label).eyebrow()
             Text(text)
         }
         .padding(.leading, 12)
@@ -312,8 +301,7 @@ struct FlowChips: View {
     }
     private func chip(_ text: String) -> some View {
         Text(text).font(.subheadline.weight(.bold))
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(Color.white.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(Color.auraBorder))
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color.auraRaised, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

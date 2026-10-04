@@ -2,7 +2,7 @@
 
 > Tu postes une vidéo, l'IA te donne un score d'aura sur 1000, et chaque semaine tu affrontes 30 joueurs de ton niveau.
 
-> ⚠️ **Code non compilé ici.** Le code a été écrit hors Mac/Xcode (environnement Linux), comme pour VlogMe. La syntaxe des 29 fichiers Swift est validée par un parseur, mais pas les types : attends-toi à quelques petits ajustements au premier build.
+> ⚠️ **Code non compilé ici.** Le code a été écrit hors Mac/Xcode (environnement Linux), comme pour VlogMe. La syntaxe des 28 fichiers Swift est validée par un parseur, mais pas les types : attends-toi à quelques petits ajustements au premier build.
 
 ## Le concept du classement : les Ligues d'aura
 
@@ -25,6 +25,10 @@ Un classement mondial unique décourage tout le monde sauf le top 10 : impossibl
 | **Rappels locaux** | Thème du jour (17h30), série en danger (21h), fin de saison (dimanche 18h) | Ramène les joueurs sans serveur de push. |
 
 Toutes ces valeurs se règlent dans `lib/league/rules.ts` côté backend.
+
+## Direction artistique
+
+Affiche de sport / streetwear plutôt que « néon IA » : aplats de couleur, typo système compressée en capitales (`Font.display`), gros chiffres, angles nets, ombres portées « dures », étiquettes façon autocollant (`StickerLabel`), classements en tableau de championnat. Pas de dégradés décoratifs, de flous, de halos ni d'emojis en guise d'icônes. La palette reste : violet `#B46BFF`, rose `#FF3D81`, cyan `#3DE8FF`, or `#FFD25E` sur fond `#07060D`. Tout est centralisé dans `Views/Components/Theme.swift`, et le site web suit les mêmes règles (`app/globals.css`, polices Barlow / Barlow Condensed).
 
 ## Les leviers de viralité
 
@@ -99,7 +103,7 @@ AuraMaxxing/
    ├─ League/      LeagueView · WeekResultView
    ├─ Crew/        CrewView
    ├─ Profile/     ProfileView
-   └─ Components/  AuraBackground · ParticleField · ConfettiView · CountingText · AvatarView · Theme
+   └─ Components/  Theme (couleurs, typo, boutons, StickerLabel) · AuraBackground · ConfettiView · CountingText · AvatarView
 AuraWidget/      Widget (écran d'accueil + écran verrouillé)
 Shared/          WidgetSnapshot (données partagées app ↔ widget via App Group)
 ```

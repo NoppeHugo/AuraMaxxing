@@ -13,34 +13,34 @@ struct OnboardingView: View {
     @State private var showRules = false
 
     private let slides: [(emoji: String, title: String, text: String)] = [
-        ("🗿", "T'as combien d'aura ?", "Poste une vidéo, l'IA analyse ton énergie, ton style et ta vibe, et te donne un score sur 1000."),
-        ("🏆", "Une ligue chaque semaine", "Tu affrontes 30 joueurs de ton niveau. Le top 7 monte de ligue, le bas du classement descend. Reset tous les lundis."),
-        ("⚡", "Thème du jour, série, crew", "Colle au thème du jour pour +25 %, poste chaque jour pour un bonus de série, et monte un crew avec tes potes."),
+        ("847", "T'as combien d'aura ?", "Poste une vidéo, l'IA analyse ton énergie, ton style et ta vibe, et te donne un score sur 1000."),
+        ("#1", "Une ligue chaque semaine", "Tu affrontes 30 joueurs de ton niveau. Le top 7 monte de ligue, le bas du classement descend. Reset tous les lundis."),
+        ("+25%", "Thème du jour, série, crew", "Colle au thème du jour pour +25 %, poste chaque jour pour un bonus de série, et monte un crew avec tes potes."),
     ]
 
     var body: some View {
         ZStack {
-            AuraBackground()
-            ParticleField(colors: [.auraPurple, .auraCyan, .white], count: 40, speed: 0.6)
-                .ignoresSafeArea()
+            AuraBackground(colors: [[Color.auraPurple, .auraPink, .auraCyan][min(page, 2)]], intensity: page < slides.count ? 0.5 : 0)
 
             VStack(spacing: 24) {
                 if page < slides.count {
                     Spacer()
                     let slide = slides[page]
-                    Text(slide.emoji).font(.system(size: 96))
-                        .shadow(color: .auraPurple, radius: 30)
-                    Text(slide.title)
-                        .font(.system(size: 34, weight: .black, design: .rounded))
-                        .multilineTextAlignment(.center)
+                    // Gros chiffre « affiche » au lieu d'un emoji.
+                    Text(slide.emoji).font(.display(150))
+                        .foregroundStyle([Color.auraPurple, .auraPink, .auraCyan][page])
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(slide.title.uppercased())
+                        .font(.display(48))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(slide.text)
                         .font(.title3)
                         .foregroundStyle(Color.auraMuted)
-                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer()
                     HStack(spacing: 8) {
                         ForEach(0..<slides.count, id: \.self) { i in
-                            Capsule().fill(i == page ? Color.white : Color.white.opacity(0.25))
+                            Rectangle().fill(i == page ? Color.white : Color.white.opacity(0.25))
                                 .frame(width: i == page ? 22 : 8, height: 8)
                         }
                     }
@@ -63,8 +63,8 @@ struct OnboardingView: View {
     private var signup: some View {
         VStack(alignment: .leading, spacing: 18) {
             Spacer()
-            Text("Choisis ton pseudo")
-                .font(.system(size: 32, weight: .black, design: .rounded))
+            Text("CHOISIS TON PSEUDO")
+                .font(.display(48))
             Text("C'est le nom qui apparaîtra dans les classements.")
                 .foregroundStyle(Color.auraMuted)
 

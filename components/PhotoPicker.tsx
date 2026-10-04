@@ -31,7 +31,7 @@ export function PhotoPicker({
         </>
       ) : (
         <>
-          <span className="picker-icon">📸</span>
+          <span className="picker-icon">+</span>
           <strong>{label}</strong>
           <span className="muted small">Fit, selfie, pose… JPEG ou PNG</span>
         </>

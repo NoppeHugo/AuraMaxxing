@@ -9,18 +9,20 @@ struct AvatarView: View {
     var body: some View {
         let c1 = Color(hex: player.auraColor), c2 = Color(hex: player.auraColor2)
         ZStack {
-            LinearGradient(colors: [c1, c2], startPoint: .topLeading, endPoint: .bottomTrailing)
+            // Deux aplats coupés en diagonale (pas de dégradé).
+            LinearGradient(stops: [.init(color: c1, location: 0.5), .init(color: c2, location: 0.5)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
             if let cover = player.cover, let image = Self.decode(cover) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 Text(player.pseudo.prefix(2).uppercased())
-                    .font(.system(size: size * 0.38, weight: .black, design: .rounded))
+                    .font(.system(size: size * 0.42, weight: .black).width(.compressed))
                     .foregroundStyle(Color.auraBackground)
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .shadow(color: c1.opacity(0.6), radius: size / 5)
+        .overlay(Circle().stroke(Color.auraBackground, lineWidth: 2))
     }
 
     private static let cache = NSCache<NSString, UIImage>()
@@ -35,46 +37,44 @@ struct AvatarView: View {
     }
 }
 
-/// Pastille de ligue (emoji + nom) aux couleurs de la ligue.
+/// Étiquette de ligue : aplat de la couleur de la ligue, nom en capitales condensées.
 struct LeagueBadge: View {
     let league: LeagueInfo
     var compact = false
 
     var body: some View {
-        HStack(spacing: 6) {
-            Text(league.emoji)
-            if !compact { Text(league.name).font(.system(size: 13, weight: .heavy)) }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .foregroundStyle(Color(hex: league.color))
-        .background(Color(hex: league.color).opacity(0.14), in: Capsule())
-        .overlay(Capsule().stroke(Color(hex: league.color).opacity(0.4)))
+        Text(compact ? String(league.name.split(separator: " ").last ?? "") : league.name)
+            .font(.system(size: 12, weight: .black).width(.condensed))
+            .textCase(.uppercase)
+            .kerning(1)
+            .foregroundStyle(Color.readable(onHex: league.color))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Color(hex: league.color), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 
-/// Barres de stats animées.
+/// Stats en blocs (10 segments), façon jauge de jeu vidéo.
 struct StatBarsView: View {
     let stats: Stats
-    var colors: [Color] = [.auraPurple, .auraPink]
+    var colors: [Color] = [.auraPurple]
     @State private var shown = false
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 11) {
             ForEach(Array(stats.rows.enumerated()), id: \.offset) { i, row in
                 HStack(spacing: 10) {
-                    Text(row.label).font(.subheadline).foregroundStyle(Color.auraMuted).frame(width: 92, alignment: .leading)
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.white.opacity(0.07))
-                            Capsule()
-                                .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-                                .frame(width: shown ? geo.size.width * CGFloat(row.value) / 100 : 0)
-                                .animation(.spring(duration: 1.1).delay(0.15 * Double(i)), value: shown)
+                    Text(row.label).eyebrow().frame(width: 88, alignment: .leading)
+                    HStack(spacing: 3) {
+                        ForEach(0..<10, id: \.self) { block in
+                            let filled = shown && Double(block) < (Double(row.value) / 10).rounded(.up)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(filled ? (colors.first ?? .auraPurple) : Color.white.opacity(0.08))
+                                .frame(height: 12)
+                                .animation(.easeOut(duration: 0.15).delay(0.25 + Double(i) * 0.12 + Double(block) * 0.04), value: shown)
                         }
                     }
-                    .frame(height: 10)
-                    Text("\(row.value)").font(.subheadline.weight(.heavy)).monospacedDigit().frame(width: 32, alignment: .trailing)
+                    Text("\(row.value)").font(.display(20)).monospacedDigit().frame(width: 32, alignment: .trailing)
                 }
             }
         }

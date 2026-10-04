@@ -20,7 +20,7 @@ export function GetAppButtons({ code, appStoreUrl, deepLink }: { code: string; a
   return (
     <div className="stack" style={{ width: "100%" }}>
       <button className="btn btn-primary btn-block" onClick={install}>
-        📲 {copied ? "Code copié !" : "Télécharger l'app (code copié)"}
+        {copied ? "Code copié !" : "Télécharger l'app (code copié)"}
       </button>
       <a className="btn btn-ghost btn-block" href={deepLink}>
         J&apos;ai déjà l&apos;app

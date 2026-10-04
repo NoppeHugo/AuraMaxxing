@@ -20,7 +20,7 @@ struct AnalyzingView: View {
 
     var body: some View {
         ZStack {
-            AuraBackground(intensity: 0.25)
+            Color.auraBackground.ignoresSafeArea()
             VStack(spacing: 28) {
                 ZStack {
                     if !frames.isEmpty {
@@ -39,8 +39,6 @@ struct AnalyzingView: View {
                         Rectangle()
                             .fill(Color.auraCyan)
                             .frame(height: 3)
-                            .shadow(color: .auraCyan, radius: 12)
-                            .shadow(color: .auraCyan, radius: 30)
                             .offset(y: scan ? geo.size.height - 3 : 0)
                     }
                 }

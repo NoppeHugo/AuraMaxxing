@@ -6,6 +6,7 @@ struct AuraMaxxingApp: App {
     @StateObject private var session = SessionStore()
 
     init() {
+        NavigationStyle.apply()
         Analytics.configure()
         Analytics.track(.appOpened)
     }

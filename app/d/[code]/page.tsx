@@ -22,18 +22,15 @@ export default async function ChallengePage({ params }: Props) {
 
   return (
     <div className="stack" style={{ ...vars, alignItems: "center", textAlign: "center", maxWidth: 420, margin: "0 auto", paddingTop: 24 }}>
-      <p className="muted" style={{ margin: 0 }}>⚔️ DÉFI D&apos;AURA</p>
+      <p className="muted" style={{ margin: 0 }}>DÉFI D&apos;AURA</p>
       <h1 className="page-title" style={{ fontSize: 34 }}>
         <span className="gradient-text">@{c.from?.pseudo}</span> t&apos;a défié
       </h1>
-      <div
-        className="score-big"
-        style={{ backgroundImage: `linear-gradient(90deg, ${c.auraColor}, #fff, ${c.auraColor2})`, WebkitBackgroundClip: "text", color: "transparent" }}
-      >
+      <div className="score-big" style={{ borderBottom: `8px solid ${c.auraColor}`, paddingBottom: 6 }}>
         {c.score}
       </div>
       <span className="tier-badge">
-        {c.emoji} {c.tier}
+        {c.tier}
       </span>
       <p style={{ margin: 0 }}>« {c.title} »</p>
       <p className="muted">

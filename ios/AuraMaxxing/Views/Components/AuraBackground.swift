@@ -1,27 +1,24 @@
 import SwiftUI
 
-/// Fond animé : halos colorés qui dérivent lentement (effet « aura »).
+/// Fond : aplat quasi noir + un grand disque plein de la couleur d'aura, coupé par le bord de l'écran.
+/// Forme nette, statique, sans flou : un parti pris graphique plutôt qu'un halo « néon ».
 struct AuraBackground: View {
-    var colors: [Color] = [.auraPurple, .auraPink, .auraCyan]
+    var colors: [Color] = [.auraPurple]
     var intensity: Double = 0.35
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            GeometryReader { geo in
-                ZStack {
-                    Color.auraBackground
-                    ForEach(Array(colors.enumerated()), id: \.offset) { i, color in
-                        let phase = t / (7 + Double(i) * 2) + Double(i) * 2.1
-                        Circle()
-                            .fill(color.opacity(intensity))
-                            .frame(width: geo.size.width * 1.1)
-                            .blur(radius: 90)
-                            .offset(
-                                x: cos(phase) * geo.size.width * 0.35,
-                                y: sin(phase * 1.3) * geo.size.height * 0.3 - geo.size.height * 0.15
-                            )
-                    }
+        GeometryReader { geo in
+            ZStack(alignment: .topTrailing) {
+                Color.auraBackground
+                if intensity > 0, let color = colors.first {
+                    Circle()
+                        .fill(color.opacity(min(1, intensity * 0.6)))
+                        .frame(width: geo.size.width * 1.1)
+                        .offset(x: geo.size.width * 0.45, y: -geo.size.width * 0.35)
+                    Circle()
+                        .stroke(color.opacity(min(1, intensity * 1.2)), lineWidth: 2)
+                        .frame(width: geo.size.width * 1.35)
+                        .offset(x: geo.size.width * 0.55, y: -geo.size.width * 0.45)
                 }
             }
         }

@@ -78,7 +78,7 @@ struct UploadFlowView: View {
 
     private var pickView: some View {
         ZStack {
-            AuraBackground()
+            Color.auraBackground.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     Spacer()
@@ -87,11 +87,10 @@ struct UploadFlowView: View {
                     }
                 }
                 Spacer()
-                Text(challenge == nil ? "Montre ton aura" : "Relève le défi")
-                    .font(.system(size: 36, weight: .black, design: .rounded))
+                Text(challenge == nil ? "MONTRE TON AURA" : "RELÈVE LE DÉFI")
+                    .font(.display(52))
                 if let challenge {
                     HStack(spacing: 12) {
-                        Text("⚔️").font(.largeTitle)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("@\(challenge.from?.pseudo ?? "?") a fait \(challenge.score)").font(.headline)
                             Text("Fais plus pour le battre. Ta vidéo compte aussi pour ta ligue.")
@@ -103,8 +102,8 @@ struct UploadFlowView: View {
                 }
                 if let today = session.profile?.today {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("⚡ THÈME DU JOUR · +25 %").font(.caption.weight(.heavy)).foregroundStyle(Color.auraGold)
-                        Text(today.theme).font(.title2.weight(.bold))
+                        Text("Thème du jour · +25 %").eyebrow(Color.auraGold)
+                        Text(today.theme.uppercased()).font(.display(30))
                         Text(today.hint).foregroundStyle(Color.auraMuted)
                     }
                     .auraCard()
@@ -165,8 +164,8 @@ struct UploadFlowView: View {
 
             LoopingPlayer(url: url)
                 .frame(maxHeight: 420)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LinearGradient.auraBrand, lineWidth: 2))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.auraPurple, lineWidth: 3))
 
             TextField("Légende (optionnel) — ex. fit du jour", text: $caption)
                 .padding(14)
@@ -180,7 +179,7 @@ struct UploadFlowView: View {
                 Text(error).font(.subheadline).foregroundStyle(Color.auraRed)
             }
             Spacer(minLength: 0)
-            Button("🔮 Lancer l'analyse") {
+            Button("Lancer l'analyse") {
                 Task { await analyze(url) }
             }
             .buttonStyle(GlowButtonStyle())

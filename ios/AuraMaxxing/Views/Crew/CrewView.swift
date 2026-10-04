@@ -18,7 +18,7 @@ struct CrewView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AuraBackground(colors: [.auraCyan, .auraPurple, .auraCyan], intensity: 0.18)
+                Color.auraBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 16) {
                         if let crew = board?.crew {
@@ -35,8 +35,7 @@ struct CrewView: View {
                 }
                 .refreshable { await load() }
             }
-            .navigationTitle("Crews")
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationTitle("CREWS")
         }
         .task { await load() }
     }
@@ -47,17 +46,17 @@ struct CrewView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(crew.name).font(.system(size: 28, weight: .black, design: .rounded))
+                    Text(crew.name.uppercased()).font(.display(38))
                     Text("#\(crew.rank) des crews · \(crew.points) pts cette semaine")
                         .font(.subheadline).foregroundStyle(Color.auraMuted)
                     if crew.kind == "school", let city = crew.city {
-                        Text("🏫 Établissement · \(city)").font(.caption.weight(.bold)).foregroundStyle(Color.auraCyan)
+                        Text("Établissement · \(city)").eyebrow(Color.auraCyan)
                     }
                 }
                 Spacer()
             }
             // Le code d'invitation est fait pour être partagé en story / dans le groupe de la classe.
-            ShareLink(item: "Rejoins mon crew « \(crew.name) » sur AuraMaxxing avec le code \(crew.code) 🔥") {
+            ShareLink(item: "Rejoins mon crew « \(crew.name) » sur AuraMaxxing avec le code \(crew.code)") {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("CODE D'INVITATION").font(.caption2.weight(.heavy)).foregroundStyle(Color.auraMuted)
@@ -93,7 +92,7 @@ struct CrewView: View {
 
     private var joinOrCreate: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Monte ton crew").font(.system(size: 28, weight: .black, design: .rounded))
+            Text("MONTE TON CREW").font(.display(40))
             Text("Ton lycée ou ta bande : les points de chaque membre s'additionnent. Chaque semaine, on découvre le lycée qui a le plus d'aura de France et de ta ville.")
                 .foregroundStyle(Color.auraMuted)
 
@@ -106,8 +105,8 @@ struct CrewView: View {
             HStack { line; Text("ou").foregroundStyle(Color.auraMuted); line }
 
             Picker("Type", selection: $kind) {
-                Text("🏫 Lycée / école").tag("school")
-                Text("👥 Potes").tag("friends")
+                Text("Lycée / école").tag("school")
+                Text("Potes").tag("friends")
             }
             .pickerStyle(.segmented)
             field(kind == "school" ? "Nom de l'établissement (ex. Lycée Victor Hugo)" : "Nom du crew (ex. Les Sigmas)", text: $name)
@@ -152,7 +151,7 @@ struct CrewView: View {
             if list.isEmpty {
                 Text(rankingMode == .city && board.city == nil
                      ? "Rejoins ou crée le crew de ton lycée pour voir le classement de ta ville."
-                     : "Aucun crew ici pour l'instant. Sois le premier 👑")
+                     : "Aucun crew ici pour l'instant. Sois le premier.")
                     .font(.subheadline).foregroundStyle(Color.auraMuted).padding(.vertical, 20)
             }
             ranking(list)
@@ -163,7 +162,9 @@ struct CrewView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(top) { c in
                 HStack {
-                    Text(c.rank <= 3 ? ["🥇", "🥈", "🥉"][c.rank - 1] : "\(c.rank)").frame(width: 30)
+                    Text("\(c.rank)").font(.display(24)).monospacedDigit()
+                        .foregroundStyle(c.rank == 1 ? Color.auraGold : Color.auraMuted)
+                        .frame(width: 34, alignment: .leading)
                     VStack(alignment: .leading) {
                         Text(c.name).font(.subheadline.weight(.heavy))
                         Text("\(c.members) membre" + (c.members > 1 ? "s" : "") + (c.city.map { " · \($0)" } ?? ""))

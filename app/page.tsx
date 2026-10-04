@@ -23,35 +23,35 @@ export default async function Home() {
           </p>
           <div className="hero-ctas">
             <Link href="/scan" className="btn btn-primary">
-              🔮 Scanner mon aura
+              Scanner mon aura
             </Link>
             <Link href="/battle" className="btn btn-ghost">
-              ⚔️ Battle d&apos;aura
+              Battle d&apos;aura
             </Link>
           </div>
         </div>
         <div className="orb">
-          <div className="orb-core">🗿</div>
+          <div className="orb-core">847</div>
         </div>
       </section>
 
       <div className="grid-3">
         <Link href="/scan" className="card feature">
-          <span className="feature-icon">🔮</span>
+          <span className="feature-icon">01</span>
           <h3>Scan d&apos;aura</h3>
           <p className="muted small" style={{ margin: 0 }}>
             Score de 0 à 1000, du NPC au Mythique, avec stats drip / vibe / confiance et conseils pour monter.
           </p>
         </Link>
         <Link href="/battle" className="card feature">
-          <span className="feature-icon">⚔️</span>
+          <span className="feature-icon">02</span>
           <h3>Battle 1v1</h3>
           <p className="muted small" style={{ margin: 0 }}>
             Cinq rounds commentés par l&apos;IA. Le gagnant prend des points ELO au perdant.
           </p>
         </Link>
         <Link href="/trends" className="card feature">
-          <span className="feature-icon">📈</span>
+          <span className="feature-icon">03</span>
           <h3>Trends</h3>
           <p className="muted small" style={{ margin: 0 }}>
             {topTrend
@@ -63,16 +63,16 @@ export default async function Home() {
 
       {players.length > 0 && (
         <>
-          <h2 className="section-title">🏆 Top aura</h2>
+          <h2 className="section-title">Top aura</h2>
           <div className="card" style={{ padding: 8 }}>
             {players.map((p, i) => (
               <div key={p.id} className="lb-row">
-                <span className="lb-rank">{["🥇", "🥈", "🥉"][i]}</span>
+                <span className="lb-rank">{i + 1}</span>
                 <Avatar pseudo={p.pseudo} thumb={p.thumb} color={p.auraColor} color2={p.auraColor2} />
                 <div className="lb-main">
                   <div className="lb-name">{p.pseudo}</div>
                   <div className="lb-meta">
-                    {p.emoji} {p.tier}
+                    {p.tier}
                   </div>
                 </div>
                 <span className="lb-score">{p.bestScore}</span>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AuraField } from "@/components/AuraField";
 import { Confetti } from "@/components/Confetti";
 import { CountUp } from "@/components/CountUp";
 import { PhotoPicker, type Photo } from "@/components/PhotoPicker";
@@ -125,7 +124,7 @@ export default function ScanPage() {
           </label>
           {error && <div className="error">{error}</div>}
           <button className="btn btn-primary btn-block" disabled={!photo || pseudo.trim().length < 2}>
-            🔮 Lancer le scan
+            Lancer le scan
           </button>
           <p className="muted small">
             L&apos;IA juge le style, la vibe et l&apos;attitude — jamais le physique. La photo sert uniquement à
@@ -166,24 +165,23 @@ function ScanResult({
     <div className="stack" style={{ ...vars, alignItems: "center", textAlign: "center" }}>
       {a.aura_score >= 600 && <Confetti colors={colors} />}
       <div className="aura-wrap" style={{ margin: "40px 0 10px" }}>
-        <AuraField colors={colors} intensity={0.5 + a.aura_score / 1000} />
         <img className="aura-photo" src={photo} alt="Ta photo" />
       </div>
 
-      <div className="score-big gradient-text" style={{ backgroundImage: `linear-gradient(90deg, ${a.aura_color}, #fff, ${a.aura_color_2})` }}>
+      <div className="score-big">
         <CountUp to={a.aura_score} />
       </div>
       <div className="muted small" style={{ marginTop: -8 }}>
         points d&apos;aura
       </div>
       <span className="tier-badge" style={{ animationDelay: "1.4s" }}>
-        {a.emoji} {a.tier}
+        {a.tier}
       </span>
       <h2 className="reveal" style={{ animationDelay: "1.6s", fontSize: 24 }}>
         {a.title}
       </h2>
       <p className="reveal muted" style={{ animationDelay: "1.7s", margin: 0 }}>
-        {result.isRecord ? "🚀 Nouveau record perso ! " : ""}#{result.rank} au classement Aura
+        {result.isRecord ? "Nouveau record perso ! " : ""}#{result.rank} au classement Aura
       </p>
 
       <div className="grid-2 reveal" style={{ width: "100%", textAlign: "left", animationDelay: "1.8s" }}>
@@ -202,11 +200,11 @@ function ScanResult({
             ))}
           </div>
           <div className="quote">
-            <div className="quote-label">🔥 Hype</div>
+            <div className="quote-label">Hype</div>
             {a.hype}
           </div>
           <div className="quote">
-            <div className="quote-label">💀 Roast</div>
+            <div className="quote-label">Roast</div>
             {a.roast}
           </div>
         </div>
@@ -223,13 +221,13 @@ function ScanResult({
 
       <div className="hero-ctas" style={{ justifyContent: "center", marginTop: 8 }}>
         <button className="btn btn-primary" onClick={share} disabled={sharing}>
-          📲 {sharing ? "Création…" : "Partager ma carte"}
+          {sharing ? "Création…" : "Partager ma carte"}
         </button>
         <Link href="/battle" className="btn btn-ghost">
-          ⚔️ Défier un pote
+          Défier un pote
         </Link>
         <button className="btn btn-ghost" onClick={onRetry}>
-          🔁 Rescanner
+          Rescanner
         </button>
       </div>
     </div>

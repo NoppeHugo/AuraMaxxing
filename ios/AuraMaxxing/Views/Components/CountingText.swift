@@ -4,7 +4,7 @@ import SwiftUI
 struct CountingText: View {
     let value: Int
     var duration: Double = 1.8
-    var font: Font = .system(size: 96, weight: .black, design: .rounded)
+    var font: Font = .display(140)
 
     @State private var start = Date()
 

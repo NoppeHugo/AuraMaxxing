@@ -131,20 +131,16 @@ private enum RevealOverlay {
         // Cadre d'aura lumineux qui s'allume après le scan puis pulse
         let glow = CALayer()
         glow.frame = parent.frame.insetBy(dx: 10, dy: 10)
-        glow.borderWidth = 14
-        glow.cornerRadius = 40
+        glow.borderWidth = 16
+        glow.cornerRadius = 0
         glow.borderColor = c1.cgColor
-        glow.shadowColor = c2.cgColor
-        glow.shadowRadius = 40
-        glow.shadowOpacity = 1
-        glow.shadowOffset = .zero
         glow.opacity = 0
         parent.addSublayer(glow)
         show(glow, at: scanEnd, fade: 0.4)
         let pulse = CABasicAnimation(keyPath: "borderColor")
         pulse.fromValue = c1.cgColor
         pulse.toValue = c2.cgColor
-        pulse.duration = 0.9
+        pulse.duration = 0.5
         pulse.autoreverses = true
         pulse.repeatCount = .greatestFiniteMagnitude
         pulse.beginTime = AVCoreAnimationBeginTimeAtZero + scanEnd
@@ -172,7 +168,7 @@ private enum RevealOverlay {
         hide(laser, at: scanEnd)
 
         // Logo + pseudo (permanent)
-        let logo = textLayer("AuraMaxxing", font: .systemFont(ofSize: 52, weight: .black), color: .white, maxWidth: size.width - 120)
+        let logo = textLayer("AURAMAXXING", font: .systemFont(ofSize: 60, weight: .black, width: .compressed), color: .white, maxWidth: size.width - 120)
         logo.frame.origin = CGPoint(x: 60, y: 90)
         parent.addSublayer(logo)
         let handle = textLayer("@\(content.pseudo) · \(content.leagueLine)", font: .systemFont(ofSize: 36, weight: .semibold),
@@ -181,25 +177,32 @@ private enum RevealOverlay {
         parent.addSublayer(handle)
 
         // Score qui défile : une couche par palier, masquée sur un dégradé aux couleurs de l'aura.
-        let scoreFont = UIFont.systemFont(ofSize: 300, weight: .black)
+        let scoreFont = UIFont.systemFont(ofSize: 360, weight: .black, width: .compressed)
         let steps = 24
         let scoreTop = size.height * 0.50
         for i in 0..<steps {
             let p = Double(i + 1) / Double(steps)
             let value = Int((Double(a.auraScore) * (1 - pow(1 - p, 3))).rounded())
-            let layer = gradientText("\(value)", font: scoreFont, colors: [c1, .white, c2], centerX: size.width / 2, top: scoreTop)
+            let layer = gradientText("\(value)", font: scoreFont, colors: [.white, .white], centerX: size.width / 2, top: scoreTop)
             parent.addSublayer(layer)
             let from = scanEnd + (countEnd - scanEnd) * Double(i) / Double(steps)
             let to = i == steps - 1 ? duration + 1 : scanEnd + (countEnd - scanEnd) * Double(i + 1) / Double(steps)
             visible(layer, from: from, to: to, total: duration)
         }
-        let unit = textLayer("POINTS D'AURA", font: .systemFont(ofSize: 40, weight: .heavy), color: UIColor.white.withAlphaComponent(0.8), maxWidth: size.width)
-        unit.frame.origin = CGPoint(x: (size.width - unit.frame.width) / 2, y: scoreTop + scoreFont.lineHeight - 20)
+        // Barre pleine sous le score + libellé (pas de halo).
+        let bar = CALayer()
+        bar.backgroundColor = c1.cgColor
+        bar.frame = CGRect(x: (size.width - 260) / 2, y: scoreTop + scoreFont.lineHeight - 30, width: 260, height: 14)
+        parent.addSublayer(bar)
+        show(bar, at: scanEnd, fade: 0.2)
+        let unit = textLayer("POINTS D'AURA", font: .systemFont(ofSize: 40, weight: .black, width: .condensed), color: .white, maxWidth: size.width)
+        unit.frame.origin = CGPoint(x: (size.width - unit.frame.width) / 2, y: bar.frame.maxY + 14)
         parent.addSublayer(unit)
         show(unit, at: scanEnd, fade: 0.3)
 
         // Tier qui « tombe »
-        let tier = badge("\(a.emoji) \(a.tier.uppercased())", colors: [c1, c2])
+        let tier = badge(a.tier.uppercased(), colors: [c2, c2])
+        tier.setAffineTransform(CGAffineTransform(rotationAngle: -0.07)) // posé de travers, façon sticker
         tier.position = CGPoint(x: size.width / 2, y: unit.frame.maxY + 90)
         parent.addSublayer(tier)
         show(tier, at: tierAt, fade: 0.05)
@@ -213,7 +216,7 @@ private enum RevealOverlay {
         tier.add(pop, forKey: "pop")
 
         // Titre
-        let title = textLayer("« \(a.title) »", font: .italicSystemFont(ofSize: 46), color: .white, maxWidth: size.width - 140, centered: true)
+        let title = textLayer(a.title.uppercased(), font: .systemFont(ofSize: 58, weight: .black, width: .compressed), color: .white, maxWidth: size.width - 140, centered: true)
         title.frame.origin = CGPoint(x: (size.width - title.frame.width) / 2, y: tier.frame.maxY + 40)
         parent.addSublayer(title)
         show(title, at: titleAt, fade: 0.4)
@@ -226,7 +229,7 @@ private enum RevealOverlay {
         show(roast, at: roastAt, fade: 0.35)
 
         // Appel à l'action permanent
-        let cta = textLayer("T'as combien d'aura ? \(content.hashtag)", font: .systemFont(ofSize: 38, weight: .heavy),
+        let cta = textLayer("T'AS COMBIEN D'AURA ? \(content.hashtag)", font: .systemFont(ofSize: 42, weight: .black, width: .condensed),
                             color: UIColor.white.withAlphaComponent(0.9), maxWidth: size.width - 120, centered: true)
         cta.frame.origin = CGPoint(x: (size.width - cta.frame.width) / 2, y: size.height - 210)
         parent.addSublayer(cta)
@@ -319,10 +322,10 @@ private enum RevealOverlay {
     }
 
     private static func badge(_ text: String, colors: [UIColor]) -> CALayer {
-        let label = textImage(text, font: .systemFont(ofSize: 48, weight: .black), color: UIColor(white: 0.04, alpha: 1), maxWidth: 900, centered: true)
+        let label = textImage(text, font: .systemFont(ofSize: 64, weight: .black, width: .condensed), color: UIColor(white: 0.04, alpha: 1), maxWidth: 900, centered: true)
         let pill = CAGradientLayer()
         pill.bounds = CGRect(x: 0, y: 0, width: label.size.width + 80, height: label.size.height + 36)
-        pill.cornerRadius = pill.bounds.height / 2
+        pill.cornerRadius = 10
         pill.colors = colors.map(\.cgColor)
         pill.startPoint = CGPoint(x: 0, y: 0.5)
         pill.endPoint = CGPoint(x: 1, y: 0.5)

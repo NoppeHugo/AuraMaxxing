@@ -26,18 +26,17 @@ struct WeekResultView: View {
 
     var body: some View {
         ZStack {
-            AuraBackground(colors: [color, .auraPurple, color], intensity: 0.35)
-            ParticleField(colors: [color, .white], count: 50, speed: 0.8).ignoresSafeArea()
+            AuraBackground(colors: [color], intensity: 0.5)
             if result.outcome == .up || result.rank == 1 { ConfettiView(colors: [color, .auraGold, .white]) }
 
             VStack(spacing: 18) {
                 Spacer()
-                Text(result.leagueInfo.emoji)
-                    .font(.system(size: 120))
-                    .shadow(color: color, radius: 40)
-                    .scaleEffect(shown ? 1 : 0.2)
-                    .rotationEffect(.degrees(shown ? 0 : -30))
-                Text(headline).font(.system(size: 40, weight: .black, design: .rounded))
+                // Le nom de la ligue « tamponné » sur l'écran.
+                StickerLabel(text: result.leagueInfo.name, fill: color, angle: -5)
+                    .scaleEffect(shown ? 1.8 : 4)
+                    .opacity(shown ? 1 : 0)
+                    .padding(.bottom, 24)
+                Text(headline.uppercased()).font(.display(64))
                 Text(message).font(.title3).multilineTextAlignment(.center).foregroundStyle(Color.auraMuted)
                 HStack(spacing: 30) {
                     stat("\(result.rank)/\(result.size)", "classement")
@@ -49,7 +48,7 @@ struct WeekResultView: View {
                     Analytics.track(.weekResultSeen, ["outcome": result.outcome.rawValue])
                     dismiss()
                 }
-                .buttonStyle(GlowButtonStyle(colors: [color, .auraPurple]))
+                .buttonStyle(GlowButtonStyle(colors: [color], textColor: .readable(onHex: result.leagueInfo.color)))
             }
             .padding(24)
         }
@@ -61,8 +60,8 @@ struct WeekResultView: View {
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack {
-            Text(value).font(.system(size: 30, weight: .black, design: .rounded))
-            Text(label).font(.caption).foregroundStyle(Color.auraMuted)
+            Text(value).font(.display(40))
+            Text(label).eyebrow()
         }
     }
 }

@@ -23,7 +23,7 @@ export default function ClassementPage() {
 
   const value = (p: Player) => (mode === "elo" ? p.elo : p.bestScore);
   const meta = (p: Player) =>
-    mode === "elo" ? `${p.wins}V · ${p.losses}D · ${p.tier}` : `${p.emoji} ${p.tier}${p.title ? ` · ${p.title}` : ""}`;
+    mode === "elo" ? `${p.wins}V · ${p.losses}D · ${p.tier}` : `${p.tier}${p.title ? ` · ${p.title}` : ""}`;
   const players = board?.players ?? [];
   const podium = [players[1], players[0], players[2]];
 
@@ -37,7 +37,7 @@ export default function ClassementPage() {
       <div className="tabs" role="tablist">
         {(["elo", "aura"] as const).map((m) => (
           <button key={m} role="tab" aria-selected={mode === m} className={`tab ${mode === m ? "active" : ""}`} onClick={() => setMode(m)}>
-            {m === "elo" ? "⚔️ ELO Battle" : "🔮 Aura max"}
+            {m === "elo" ? "ELO Battle" : "Aura max"}
           </button>
         ))}
       </div>
@@ -59,8 +59,7 @@ export default function ClassementPage() {
               const place = i === 1 ? 1 : i === 0 ? 2 : 3;
               return (
                 <div key={p.id} className="podium-spot" style={{ animationDelay: `${place * 0.15}s` }}>
-                  <div style={{ fontSize: 26 }}>{["🥇", "🥈", "🥉"][place - 1]}</div>
-                  <Avatar pseudo={p.pseudo} thumb={p.thumb} color={p.auraColor} color2={p.auraColor2} size={place === 1 ? 76 : 60} />
+                                    <Avatar pseudo={p.pseudo} thumb={p.thumb} color={p.auraColor} color2={p.auraColor2} size={place === 1 ? 76 : 60} />
                   <div className="podium-name">{p.pseudo}</div>
                   <div className="lb-score">{value(p)}</div>
                   <div className="podium-block" style={{ height: [110, 80, 60][place - 1] }}>

@@ -21,7 +21,7 @@ export default async function InvitePage({ params }: Props) {
   return (
     <div className="stack" style={{ alignItems: "center", textAlign: "center", maxWidth: 420, margin: "0 auto", paddingTop: 24 }}>
       <div className="orb" style={{ width: 180 }}>
-        <div className="orb-core">🗿</div>
+        <div className="orb-core">847</div>
       </div>
       <h1 className="page-title" style={{ fontSize: 34 }}>
         <span className="gradient-text">@{u.pseudo}</span> t&apos;invite

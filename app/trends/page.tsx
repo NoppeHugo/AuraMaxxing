@@ -36,7 +36,7 @@ export default async function TrendsPage() {
         <div className="card empty" style={{ marginTop: 20 }}>
           <p>Pas encore assez de données. Lance des scans pour faire émerger les trends.</p>
           <Link className="btn btn-primary" href="/scan">
-            🔮 Scanner mon aura
+            Scanner mon aura
           </Link>
         </div>
       ) : (
@@ -69,7 +69,7 @@ export default async function TrendsPage() {
 
           <div className="grid-2" style={{ marginTop: 20 }}>
             <div className="card stack">
-              <h3>🚀 En hausse cette semaine</h3>
+              <h3>En hausse cette semaine</h3>
               {s.rising.length ? (
                 s.rising.map((t) => (
                   <div key={t.name} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -82,7 +82,7 @@ export default async function TrendsPage() {
               )}
             </div>
             <div className="card stack">
-              <h3>👑 Trends qui donnent le plus d&apos;aura</h3>
+              <h3>Trends qui donnent le plus d&apos;aura</h3>
               {s.bestAura.length ? (
                 s.bestAura.map((t) => (
                   <div key={t.name} style={{ display: "flex", justifyContent: "space-between" }}>

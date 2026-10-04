@@ -86,7 +86,7 @@ export default function BattlePage() {
         </div>
       )}
       <button className="btn btn-primary btn-block" style={{ marginTop: 20 }} disabled={!ready || loading} onClick={fight}>
-        {loading ? "⚡ Combat en cours…" : "⚔️ Lancer la battle"}
+        {loading ? "Combat en cours…" : "Lancer la battle"}
       </button>
     </>
   );
@@ -160,7 +160,7 @@ function BattleResult({
       style={{ "--c1": color } as React.CSSProperties}
     >
       <img src={f.photo!.preview} alt="" />
-      {done && v.winner === key && <div className="crown">👑</div>}
+      {done && v.winner === key && <div className="crown"><span className="tier-badge" style={{ background: "var(--gold)" }}>Winner</span></div>}
       <div className="fighter-name">
         {f.pseudo}
         {done && (
@@ -201,11 +201,11 @@ function BattleResult({
       <div className="stack" style={{ gap: 8 }}>
         {v.rounds.slice(0, shownRounds).map((r, i) => (
           <div key={r.category} className="round">
-            <span className="round-side">{r.winner === "A" ? "✅" : "·"}</span>
+            <span className="round-side">{r.winner === "A" ? "■" : ""}</span>
             <span className="round-cat">
               Round {i + 1} · {STAT_LABELS[r.category]}
             </span>
-            <span className="round-side right">{r.winner === "B" ? "✅" : "·"}</span>
+            <span className="round-side right">{r.winner === "B" ? "■" : ""}</span>
             <span className="round-comment">{r.comment}</span>
           </div>
         ))}
@@ -216,7 +216,7 @@ function BattleResult({
         <div className="card stack reveal" style={{ textAlign: "center" }}>
           <div className="quote-label">Coup final : {v.finisher}</div>
           <h2 style={{ fontSize: 28 }}>
-            🏆 {v.winner === "A" ? a.pseudo : b.pseudo} gagne la battle !
+            {v.winner === "A" ? a.pseudo : b.pseudo} gagne la battle !
           </h2>
           <p style={{ margin: 0 }}>{v.verdict}</p>
           <div className="grid-2 small" style={{ textAlign: "left" }}>
@@ -225,10 +225,10 @@ function BattleResult({
           </div>
           <div className="hero-ctas" style={{ justifyContent: "center", marginTop: 0 }}>
             <button className="btn btn-primary" onClick={onReset}>
-              ⚔️ Nouvelle battle
+              Nouvelle battle
             </button>
             <Link className="btn btn-ghost" href="/classement">
-              🏆 Voir le classement
+              Voir le classement
             </Link>
           </div>
         </div>
