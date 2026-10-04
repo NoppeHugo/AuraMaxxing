@@ -88,3 +88,14 @@ export const BattleVerdictSchema = z.object({
   finisher: z.string().describe("Nom du « coup final » qui a fait gagner, ex. « Combo Drip Ultime »"),
 });
 export type BattleVerdict = z.infer<typeof BattleVerdictSchema>;
+
+/** Analyse d'une vidéo (envoyée sous forme d'images clés extraites sur l'iPhone). */
+export const VideoAuraSchema = AuraAnalysisSchema.extend({
+  content_ok: z
+    .boolean()
+    .describe("false si la vidéo contient de la nudité, de la violence, un danger, de la haine ou du harcèlement"),
+  theme_match: z.boolean().describe("true si la vidéo correspond clairement au thème du jour"),
+  peak_frame: z.number().int().describe("Index (à partir de 0) de l'image clé où l'aura est la plus forte"),
+  peak_moment: z.string().describe("Ce qui se passe au moment du pic d'aura, 12 mots max"),
+});
+export type VideoAura = z.infer<typeof VideoAuraSchema>;
