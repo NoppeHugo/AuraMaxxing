@@ -5,7 +5,9 @@ import { register } from "@/lib/league/store";
 export async function POST(request: Request) {
   try {
     rateLimit(request, 5);
-    return Response.json(await register((await body(request)).pseudo));
+    const b = await body(request);
+    // `ref` : code de défi ou pseudo du pote qui a invité (parrainage).
+    return Response.json(await register(b.pseudo, b.ref));
   } catch (error) {
     return errorResponse(error);
   }

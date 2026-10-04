@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 /// Parcours complet : choisir / filmer une vidéo → aperçu → analyse IA → résultat.
 struct UploadFlowView: View {
 
+    /// Défi relevé (lien reçu d'un pote), sinon nil.
+    var challenge: ChallengeInfo? = nil
+
     @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
 
@@ -13,7 +16,7 @@ struct UploadFlowView: View {
         case pick
         case preview(URL)
         case analyzing([UIImage])
-        case result(UploadResult, [UIImage])
+        case result(UploadResult, [UIImage], URL)
     }
 
     @State private var stage: Stage = .pick
@@ -33,8 +36,16 @@ struct UploadFlowView: View {
                 previewView(url)
             case .analyzing(let frames):
                 AnalyzingView(frames: frames)
-            case .result(let result, let frames):
-                ResultView(result: result, frames: frames, pseudo: session.profile?.user.pseudo ?? "") {
+            case .result(let result, let frames, let url):
+                ResultView(
+                    result: result,
+                    frames: frames,
+                    sourceURL: url,
+                    pseudo: session.profile?.user.pseudo ?? "",
+                    leagueLine: session.profile.map { "\($0.league.emoji) \($0.league.name)" } ?? "",
+                    hashtag: session.profile?.today.hashtag ?? "#AuraDuJour"
+                ) {
+                    if challenge != nil { session.pendingChallenge = nil }
                     Task { await session.refresh() }
                     dismiss()
                 }
@@ -76,8 +87,20 @@ struct UploadFlowView: View {
                     }
                 }
                 Spacer()
-                Text("Montre ton aura")
+                Text(challenge == nil ? "Montre ton aura" : "Relève le défi")
                     .font(.system(size: 36, weight: .black, design: .rounded))
+                if let challenge {
+                    HStack(spacing: 12) {
+                        Text("⚔️").font(.largeTitle)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("@\(challenge.from?.pseudo ?? "?") a fait \(challenge.score)").font(.headline)
+                            Text("Fais plus pour le battre. Ta vidéo compte aussi pour ta ligue.")
+                                .font(.subheadline).foregroundStyle(Color.auraMuted)
+                        }
+                    }
+                    .auraCard()
+                    .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color(hex: challenge.auraColor).opacity(0.6)))
+                }
                 if let today = session.profile?.today {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("⚡ THÈME DU JOUR · +25 %").font(.caption.weight(.heavy)).foregroundStyle(Color.auraGold)
@@ -183,12 +206,13 @@ struct UploadFlowView: View {
                 duration: extracted.duration,
                 caption: caption,
                 coverConsent: showCover,
-                cover: showCover ? middle.squareThumbnail().jpegDataURL(quality: 0.6) : nil
+                cover: showCover ? middle.squareThumbnail().jpegDataURL(quality: 0.6) : nil,
+                challengeCode: challenge?.code
             )
             let result: UploadResult = try await APIClient.shared.post("videos", body)
             Analytics.track(.videoAnalyzed, ["score": result.analysis.auraScore, "points": result.video.points])
             Haptics.success()
-            stage = .result(result, extracted.frames)
+            stage = .result(result, extracted.frames, url)
         } catch {
             Analytics.track(.analysisFailed)
             Haptics.error()

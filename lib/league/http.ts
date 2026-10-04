@@ -21,3 +21,8 @@ export async function body(request: Request): Promise<Record<string, unknown>> {
     return {};
   }
 }
+
+/** URL publique du site (liens de défi / d'invitation partagés). */
+export function publicUrl(request: Request) {
+  return (process.env.AURA_PUBLIC_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+}

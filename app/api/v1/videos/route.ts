@@ -39,7 +39,13 @@ export async function POST(request: Request) {
       caption: parseCaption(b.caption),
       theme: themeOfDay().title,
     });
-    const result = await recordVideo(user, analysis, { consent: b.coverConsent === true, image: parseThumb(b.cover) });
+    const challengeCode = typeof b.challengeCode === "string" ? b.challengeCode : undefined;
+    const result = await recordVideo(
+      user,
+      analysis,
+      { consent: b.coverConsent === true, image: parseThumb(b.cover) },
+      challengeCode,
+    );
     return Response.json({ analysis, ...result });
   } catch (error) {
     return errorResponse(error);

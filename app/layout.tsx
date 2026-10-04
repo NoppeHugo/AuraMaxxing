@@ -3,6 +3,7 @@ import { Nav } from "@/components/Nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.AURA_PUBLIC_URL ?? "http://localhost:3000"),
   title: "AuraMaxxing — Battle d'aura",
   description: "Fais analyser ton aura par l'IA, affronte tes potes en battle et grimpe au classement.",
 };

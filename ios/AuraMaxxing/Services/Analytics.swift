@@ -18,6 +18,11 @@ enum Analytics {
         case crewJoined         = "crew_joined"
         case crewCodeShared     = "crew_code_shared"
         case userReported       = "user_reported"
+        case revealExported     = "reveal_exported"
+        case revealShared       = "reveal_shared"
+        case challengeShared    = "challenge_shared"
+        case challengeAccepted  = "challenge_accepted"
+        case inviteShared       = "invite_shared"
     }
 
     private static var isEnabled = false

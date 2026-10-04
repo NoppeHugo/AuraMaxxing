@@ -7,6 +7,11 @@ struct CrewView: View {
     @State private var board: CrewBoard?
     @State private var name = ""
     @State private var code = ""
+    @State private var kind = "school"
+    @State private var city = ""
+    @State private var rankingMode: RankingMode = .schools
+
+    enum RankingMode: String, CaseIterable { case schools = "Lycées", city = "Ma ville", all = "Tous" }
     @State private var error: String?
     @State private var busy = false
 
@@ -24,7 +29,7 @@ struct CrewView: View {
                             ProgressView().padding(.top, 60)
                         }
                         if let error { Text(error).foregroundStyle(Color.auraRed) }
-                        if let top = board?.top, !top.isEmpty { ranking(top) }
+                        if let board { rankings(board) }
                     }
                     .padding(16)
                 }
@@ -45,6 +50,9 @@ struct CrewView: View {
                     Text(crew.name).font(.system(size: 28, weight: .black, design: .rounded))
                     Text("#\(crew.rank) des crews · \(crew.points) pts cette semaine")
                         .font(.subheadline).foregroundStyle(Color.auraMuted)
+                    if crew.kind == "school", let city = crew.city {
+                        Text("🏫 Établissement · \(city)").font(.caption.weight(.bold)).foregroundStyle(Color.auraCyan)
+                    }
                 }
                 Spacer()
             }
@@ -86,7 +94,7 @@ struct CrewView: View {
     private var joinOrCreate: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Monte ton crew").font(.system(size: 28, weight: .black, design: .rounded))
-            Text("Ta bande, ta classe, ton lycée : les points de chaque membre s'additionnent. Le meilleur crew de la semaine est affiché en haut du classement.")
+            Text("Ton lycée ou ta bande : les points de chaque membre s'additionnent. Chaque semaine, on découvre le lycée qui a le plus d'aura de France et de ta ville.")
                 .foregroundStyle(Color.auraMuted)
 
             field("Code d'un crew (ex. K7XP2M)", text: $code)
@@ -97,10 +105,18 @@ struct CrewView: View {
 
             HStack { line; Text("ou").foregroundStyle(Color.auraMuted); line }
 
-            field("Nom du crew (ex. Lycée Victor Hugo)", text: $name)
-            Button("Créer mon crew") { Task { await create() } }
+            Picker("Type", selection: $kind) {
+                Text("🏫 Lycée / école").tag("school")
+                Text("👥 Potes").tag("friends")
+            }
+            .pickerStyle(.segmented)
+            field(kind == "school" ? "Nom de l'établissement (ex. Lycée Victor Hugo)" : "Nom du crew (ex. Les Sigmas)", text: $name)
+            if kind == "school" {
+                field("Ville (ex. Lyon)", text: $city)
+            }
+            Button(kind == "school" ? "Créer le crew du lycée" : "Créer mon crew") { Task { await create() } }
                 .buttonStyle(GhostButtonStyle())
-                .disabled(busy || name.count < 3)
+                .disabled(busy || name.count < 3 || (kind == "school" && city.trimmingCharacters(in: .whitespaces).count < 2))
         }
         .auraCard(padding: 18)
     }
@@ -116,15 +132,42 @@ struct CrewView: View {
 
     // MARK: - Classement des crews
 
+    /// « Le lycée avec le plus d'aura » : France, ma ville, ou tous les crews.
+    private func rankings(_ board: CrewBoard) -> some View {
+        let list: [CrewBoard.CrewRow]
+        switch rankingMode {
+        case .schools: list = board.schools
+        case .city: list = board.city?.crews ?? []
+        case .all: list = board.top
+        }
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Classement · \(board.week.label)").font(.headline)
+            Picker("Classement", selection: $rankingMode) {
+                ForEach(RankingMode.allCases, id: \.self) { Text($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            if rankingMode == .city, let cityName = board.city?.name {
+                Text("Les lycées de \(cityName)").font(.caption).foregroundStyle(Color.auraMuted)
+            }
+            if list.isEmpty {
+                Text(rankingMode == .city && board.city == nil
+                     ? "Rejoins ou crée le crew de ton lycée pour voir le classement de ta ville."
+                     : "Aucun crew ici pour l'instant. Sois le premier 👑")
+                    .font(.subheadline).foregroundStyle(Color.auraMuted).padding(.vertical, 20)
+            }
+            ranking(list)
+        }
+    }
+
     private func ranking(_ top: [CrewBoard.CrewRow]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Classement des crews · \(board?.week.label ?? "")").font(.headline)
             ForEach(top) { c in
                 HStack {
                     Text(c.rank <= 3 ? ["🥇", "🥈", "🥉"][c.rank - 1] : "\(c.rank)").frame(width: 30)
                     VStack(alignment: .leading) {
                         Text(c.name).font(.subheadline.weight(.heavy))
-                        Text("\(c.members) membre\(c.members > 1 ? "s" : "")").font(.caption).foregroundStyle(Color.auraMuted)
+                        Text("\(c.members) membre" + (c.members > 1 ? "s" : "") + (c.city.map { " · \($0)" } ?? ""))
+                            .font(.caption).foregroundStyle(Color.auraMuted)
                     }
                     Spacer()
                     Text("\(c.points)").font(.headline.weight(.black)).monospacedDigit()
@@ -144,7 +187,7 @@ struct CrewView: View {
 
     private func create() async {
         await run {
-            let _: CrewRef = try await APIClient.shared.post("crew", CrewNameBody(name: name))
+            let _: CrewRef = try await APIClient.shared.post("crew", CrewNameBody(name: name, kind: kind, city: city))
             Analytics.track(.crewCreated)
         }
     }
@@ -166,7 +209,7 @@ struct CrewView: View {
         do {
             try await action()
             Haptics.success()
-            name = ""; code = ""
+            name = ""; code = ""; city = ""
             await load()
             await session.refresh()
         } catch {

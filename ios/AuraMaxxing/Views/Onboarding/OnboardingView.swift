@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @EnvironmentObject private var session: SessionStore
     @State private var page = 0
     @State private var pseudo = ""
+    @State private var refCode = ""
     @State private var acceptedRules = false
     @State private var isOldEnough = false
     @State private var loading = false
@@ -75,6 +76,21 @@ struct OnboardingView: View {
                 .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.auraBorder))
 
+            // Code d'un pote ou d'un défi : rempli tout seul via le lien, ou collé depuis la page web.
+            HStack(spacing: 10) {
+                TextField("Code d'un pote ou d'un défi (optionnel)", text: $refCode)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                PasteButton(payloadType: String.self) { strings in
+                    if let first = strings.first { refCode = first.trimmingCharacters(in: .whitespacesAndNewlines) }
+                }
+                .labelStyle(.iconOnly)
+                .buttonBorderShape(.capsule)
+                .tint(.auraPurple)
+            }
+            .padding(12)
+            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+
             Toggle(isOn: $isOldEnough) { Text("J'ai 13 ans ou plus") }
             Toggle(isOn: $acceptedRules) {
                 HStack(spacing: 4) {
@@ -98,6 +114,8 @@ struct OnboardingView: View {
             .opacity(pseudo.count < 3 || !acceptedRules || !isOldEnough ? 0.5 : 1)
         }
         .toggleStyle(SwitchToggleStyle(tint: .auraPurple))
+        .onAppear { if let ref = session.pendingRef { refCode = ref } }
+        .onChange(of: session.pendingRef) { _, ref in if let ref { refCode = ref } }
     }
 
     private func submit() async {
@@ -105,7 +123,7 @@ struct OnboardingView: View {
         error = nil
         defer { loading = false }
         do {
-            try await session.register(pseudo: pseudo.trimmingCharacters(in: .whitespaces))
+            try await session.register(pseudo: pseudo.trimmingCharacters(in: .whitespaces), ref: refCode)
             Haptics.success()
         } catch {
             self.error = error.localizedDescription

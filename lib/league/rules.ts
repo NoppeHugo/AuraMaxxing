@@ -72,3 +72,12 @@ export const THEMES = [
   { title: "Le flex calme", hint: "Montre un truc dont t'es fier·e, sans en faire trop." },
   { title: "Thème libre", hint: "Surprends-nous." },
 ] as const;
+
+/** Chaque pote invité qui poste sa 1re vidéo donne +1 vidéo par jour, jusqu'à +3. */
+export const REFERRAL_BONUS_MAX = 3;
+
+/** Durée de validité d'un lien de défi. */
+export const CHALLENGE_TTL_MS = 72 * 60 * 60 * 1000;
+
+/** Hashtag commun, repris dans les vidéos et textes de partage. */
+export const DAILY_HASHTAG = "#AuraDuJour";

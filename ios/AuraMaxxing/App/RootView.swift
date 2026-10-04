@@ -28,6 +28,7 @@ struct RootView: View {
                 .toolbarBackground(Color.auraBackground, for: .tabBar)
                 .toolbarBackground(.visible, for: .tabBar)
                 .task { await session.refresh() }
+                .onChange(of: session.openLeagueRequest) { _, _ in tab = .league }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { Task { await session.refresh() } }
                 }

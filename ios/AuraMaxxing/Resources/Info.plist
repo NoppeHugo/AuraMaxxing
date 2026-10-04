@@ -32,6 +32,21 @@
 	<string>AuraMaxxing utilise la caméra pour filmer ta vidéo d'aura.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>AuraMaxxing enregistre le son quand tu filmes ta vidéo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Pour enregistrer ta vidéo d'aura dans ta pellicule et la poster où tu veux.</string>
+
+	<!-- Liens de défi et d'invitation : auramaxxing://challenge/CODE -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>auramaxxing</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.hugonoppe.auramaxxing</string>
+		</dict>
+	</array>
 
 	<!-- Autorise http://localhost en développement (simulateur + backend local). -->
 	<key>NSAppTransportSecurity</key>

@@ -4,12 +4,22 @@ import SwiftUI
 struct ResultView: View {
     let result: UploadResult
     let frames: [UIImage]
+    let sourceURL: URL
     let pseudo: String
+    let leagueLine: String
+    let hashtag: String
     let onDone: () -> Void
 
     @State private var stage = 0
     @State private var pulse = false
     @State private var shareImage: Image?
+    // Vidéo de révélation
+    @State private var revealURL: URL?
+    @State private var exporting = false
+    // Défi
+    @State private var challenge: ChallengeInfo?
+    @State private var creatingChallenge = false
+    @State private var actionError: String?
 
     private var a: VideoAura { result.analysis }
     private var c1: Color { Color(hex: a.auraColor) }
@@ -25,6 +35,9 @@ struct ResultView: View {
             ScrollView {
                 VStack(spacing: 18) {
                     hero
+                    if stage >= 2, let outcome = result.challenge {
+                        challengeCard(outcome).transition(.scale.combined(with: .opacity))
+                    }
                     if stage >= 2 { pointsCard.transition(.move(edge: .bottom).combined(with: .opacity)) }
                     if stage >= 3 { details.transition(.opacity) }
                     if stage >= 3 { actions }
@@ -33,7 +46,9 @@ struct ResultView: View {
                 .padding(.top, 20)
             }
 
-            if stage >= 1 && (result.isRecord || a.auraScore >= 750) { ConfettiView(colors: [c1, c2, .auraGold, .white]) }
+            if stage >= 1 && (result.isRecord || a.auraScore >= 750 || result.challenge?.won == true) {
+                ConfettiView(colors: [c1, c2, .auraGold, .white])
+            }
         }
         .task { await reveal() }
     }
@@ -145,16 +160,107 @@ struct ResultView: View {
 
     private var actions: some View {
         VStack(spacing: 12) {
+            // 1. La vidéo de révélation : le format qui se poste sur TikTok / Reels.
+            if let revealURL {
+                ShareLink(item: revealURL, preview: SharePreview("Mon aura : \(a.auraScore)")) {
+                    Label("Poster ma vidéo d'aura", systemImage: "paperplane.fill")
+                }
+                .buttonStyle(GlowButtonStyle(colors: [c1, c2]))
+                .simultaneousGesture(TapGesture().onEnded { Analytics.track(.revealShared) })
+            } else {
+                Button {
+                    Task { await exportReveal() }
+                } label: {
+                    if exporting {
+                        HStack(spacing: 10) { ProgressView().tint(.white); Text("Montage en cours…") }
+                    } else {
+                        Label("Créer ma vidéo d'aura", systemImage: "film.stack")
+                    }
+                }
+                .buttonStyle(GlowButtonStyle(colors: [c1, c2]))
+                .disabled(exporting)
+            }
+
+            // 2. Défier un pote : le lien l'amène à installer l'app pour répondre.
+            if a.contentOk {
+                if let challenge, let text = challenge.shareText {
+                    ShareLink(item: text) {
+                        Label("Envoyer le défi (code \(challenge.code))", systemImage: "bolt.fill")
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                    .simultaneousGesture(TapGesture().onEnded { Analytics.track(.challengeShared) })
+                } else {
+                    Button {
+                        Task { await createChallenge() }
+                    } label: {
+                        if creatingChallenge { ProgressView().tint(.white) } else { Label("Défier un pote", systemImage: "bolt.fill") }
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                    .disabled(creatingChallenge)
+                }
+            }
+            if let actionError { Text(actionError).font(.footnote).foregroundStyle(Color.auraRed) }
+
             if let shareImage {
                 ShareLink(item: shareImage, preview: SharePreview("Mon aura : \(a.auraScore)", image: shareImage)) {
                     Label("Partager ma carte d'aura", systemImage: "square.and.arrow.up")
                 }
-                .buttonStyle(GlowButtonStyle(colors: [c1, c2]))
+                .buttonStyle(GhostButtonStyle())
                 .simultaneousGesture(TapGesture().onEnded { Analytics.track(.resultShared) })
             }
             Button("Terminer", action: onDone).buttonStyle(GhostButtonStyle())
         }
         .padding(.top, 6)
+    }
+
+    private func challengeCard(_ outcome: ChallengeOutcome) -> some View {
+        VStack(spacing: 6) {
+            Text(outcome.won ? "⚔️ DÉFI GAGNÉ" : "⚔️ DÉFI PERDU")
+                .font(.caption.weight(.heavy)).kerning(1.5)
+                .foregroundStyle(outcome.won ? Color.auraGold : Color.auraMuted)
+            Text(outcome.won ? "T'as battu @\(outcome.opponent) !" : "@\(outcome.opponent) garde la couronne… pour l'instant")
+                .font(.title3.weight(.heavy)).multilineTextAlignment(.center)
+            Text("\(outcome.myScore) vs \(outcome.opponentScore)")
+                .font(.system(size: 30, weight: .black, design: .rounded)).monospacedDigit()
+            Text(outcome.won ? "Envoie-lui ta vidéo d'aura 😏" : "Tu peux retenter avec une autre vidéo pendant 72 h.")
+                .font(.footnote).foregroundStyle(Color.auraMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .auraCard()
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(outcome.won ? Color.auraGold : Color.auraBorder, lineWidth: 1.5))
+    }
+
+    private func exportReveal() async {
+        exporting = true
+        actionError = nil
+        defer { exporting = false }
+        let challengeLine = result.challenge.map {
+            $0.won ? "⚔️ J'ai battu @\($0.opponent) : \($0.myScore) vs \($0.opponentScore)"
+                   : "⚔️ Défi contre @\($0.opponent) : \($0.myScore) vs \($0.opponentScore)"
+        }
+        do {
+            revealURL = try await RevealVideoExporter.export(
+                source: sourceURL,
+                content: .init(analysis: a, pseudo: pseudo, leagueLine: leagueLine, hashtag: hashtag, challengeLine: challengeLine)
+            )
+            Haptics.success()
+            Analytics.track(.revealExported)
+        } catch {
+            actionError = error.localizedDescription
+            Haptics.error()
+        }
+    }
+
+    private func createChallenge() async {
+        creatingChallenge = true
+        actionError = nil
+        defer { creatingChallenge = false }
+        do {
+            challenge = try await APIClient.shared.post("challenges", ChallengeBody(videoId: result.video.id))
+            Haptics.success()
+        } catch {
+            actionError = error.localizedDescription
+        }
     }
 
     // MARK: - Helpers

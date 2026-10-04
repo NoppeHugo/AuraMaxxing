@@ -4,10 +4,13 @@ import { jsonDb } from "../jsonDb";
 import type { StatKey, VideoAura } from "../schemas";
 import {
   BEST_OF,
+  CHALLENGE_TTL_MS,
   CREW_MAX_MEMBERS,
+  DAILY_HASHTAG,
   DAILY_UPLOADS,
   LEAGUES,
   LOBBY_SIZE,
+  REFERRAL_BONUS_MAX,
   REPORTS_TO_HIDE,
   THEMES,
   TOP_LEAGUE,
@@ -53,6 +56,11 @@ export type User = {
   reportedBy: string[];
   hidden: boolean;
   blocked: string[];
+  /** Parrainage : qui m'a invité, qui j'ai invité. */
+  referredBy?: string;
+  referrals?: string[];
+  /** Joueurs devant moi la dernière fois que j'ai regardé ma ligue (alertes « il t'a dépassé »). */
+  aheadSnapshot?: { week: string; ids: string[] };
 };
 
 export type Video = {
@@ -73,7 +81,33 @@ export type Video = {
 };
 
 type Lobby = { id: string; week: string; league: number; members: string[]; settled: boolean };
-type Crew = { id: string; name: string; code: string; ownerId: string; members: string[]; createdAt: number };
+export type CrewKind = "school" | "friends";
+type Crew = {
+  id: string;
+  name: string;
+  code: string;
+  ownerId: string;
+  members: string[];
+  createdAt: number;
+  kind?: CrewKind;
+  city?: string;
+};
+
+/** Défi 1v1 partagé par lien : n'importe qui peut y répondre avec sa propre vidéo. */
+type Challenge = {
+  code: string;
+  fromId: string;
+  videoId: string;
+  score: number;
+  tier: string;
+  title: string;
+  emoji: string;
+  auraColor: string;
+  auraColor2: string;
+  createdAt: number;
+  expiresAt: number;
+  answers: { userId: string; score: number; videoId: string; at: number; won: boolean }[];
+};
 type HallEntry = { week: string; userId: string; pseudo: string; points: number };
 
 type DB = {
@@ -82,9 +116,10 @@ type DB = {
   lobbies: Record<string, Lobby>;
   crews: Record<string, Crew>;
   hall: HallEntry[];
+  challenges: Record<string, Challenge>;
 };
 
-const db = jsonDb<DB>("league-db.json", () => ({ users: {}, videos: [], lobbies: {}, crews: {}, hall: [] }));
+const db = jsonDb<DB>("league-db.json", () => ({ users: {}, videos: [], lobbies: {}, crews: {}, hall: [], challenges: {} }));
 
 // ---------- Utilitaires ----------
 
@@ -129,6 +164,28 @@ function weeklyPoints(d: DB, week: string) {
         .reduce((s, p) => s + p, 0),
     ]),
   );
+}
+
+// Sans 0/O ni 1/I/L : facile à recopier à l'oral ou depuis une story.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function newCode(taken: (code: string) => boolean) {
+  let code: string;
+  do code = Array.from(randomBytes(6), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+  while (taken(code));
+  return code;
+}
+
+/** Potes invités qui ont réellement joué (au moins une vidéo) : ça évite les faux comptes. */
+function activeReferrals(d: DB, u: User) {
+  return (u.referrals ?? []).filter((id) => (d.users[id]?.videos ?? 0) > 0).length;
+}
+
+function dailyLimit(d: DB, u: User) {
+  return DAILY_UPLOADS + Math.min(REFERRAL_BONUS_MAX, activeReferrals(d, u));
+}
+
+function usedToday(d: DB, userId: string, today = dayKey()) {
+  return d.videos.filter((v) => v.userId === userId && v.day === today).length;
 }
 
 function rankLobby(d: DB, lobby: Lobby, points: Map<string, number>) {
@@ -203,7 +260,7 @@ async function ensureSettled() {
 
 // ---------- Comptes ----------
 
-export async function register(rawPseudo: unknown) {
+export async function register(rawPseudo: unknown, rawRef?: unknown) {
   const pseudo = typeof rawPseudo === "string" ? rawPseudo.trim() : "";
   if (!/^[\p{L}\p{N}_.]{3,16}$/u.test(pseudo)) {
     throw new AuraError("Pseudo : 3 à 16 caractères, lettres, chiffres, _ ou . uniquement.");
@@ -214,6 +271,7 @@ export async function register(rawPseudo: unknown) {
   const token = randomBytes(32).toString("base64url");
   return db.mutate((d) => {
     if (d.users[id]) throw new AuraError("Ce pseudo est déjà pris.", 409);
+    const inviter = resolveRef(d, rawRef);
     d.users[id] = {
       id,
       pseudo,
@@ -232,9 +290,19 @@ export async function register(rawPseudo: unknown) {
       reportedBy: [],
       hidden: false,
       blocked: [],
+      referrals: [],
+      referredBy: inviter?.id,
     };
-    return { token, user: publicUser(d.users[id]) };
+    if (inviter) (inviter.referrals ??= []).push(id);
+    return { token, user: publicUser(d.users[id]), invitedBy: inviter?.pseudo ?? null };
   });
+}
+
+/** Un code de parrainage est soit un code de défi (« K7XP2M »), soit le pseudo d'un joueur. */
+function resolveRef(d: DB, raw: unknown): User | undefined {
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const challenge = d.challenges[raw.trim().toUpperCase()];
+  return challenge ? d.users[challenge.fromId] : d.users[pseudoId(raw)];
 }
 
 export async function authenticate(request: Request): Promise<User> {
@@ -253,13 +321,18 @@ export async function deleteAccount(user: User) {
     for (const lobby of Object.values(d.lobbies)) lobby.members = lobby.members.filter((m) => m !== user.id);
     d.videos = d.videos.filter((v) => v.userId !== user.id);
     d.hall = d.hall.filter((h) => h.userId !== user.id);
+    for (const [code, c] of Object.entries(d.challenges)) {
+      if (c.fromId === user.id) delete d.challenges[code];
+      else c.answers = c.answers.filter((a) => a.userId !== user.id);
+    }
+    for (const other of Object.values(d.users)) other.referrals = other.referrals?.filter((r) => r !== user.id);
     delete d.users[user.id];
   });
 }
 
 // ---------- Profil ----------
 
-export async function profile(user: User) {
+export async function profile(user: User, publicUrl: string) {
   return db.read((d) => {
     const u = d.users[user.id];
     const week = weekKey();
@@ -267,7 +340,8 @@ export async function profile(user: User) {
     const points = weeklyPoints(d, week);
     const lobby = u.lobby?.week === week ? d.lobbies[u.lobby.id] : undefined;
     const rank = lobby ? rankLobby(d, lobby, points).indexOf(u.id) + 1 : null;
-    const usedToday = d.videos.filter((v) => v.userId === u.id && v.day === today).length;
+    const used = usedToday(d, u.id, today);
+    const limit = dailyLimit(d, u);
     const theme = themeOfDay(today);
     const crew = u.crewId ? d.crews[u.crewId] : undefined;
 
@@ -278,14 +352,24 @@ export async function profile(user: User) {
       today: {
         theme: theme.title,
         hint: theme.hint,
-        uploadsLeft: Math.max(0, DAILY_UPLOADS - usedToday),
-        uploadsMax: DAILY_UPLOADS,
+        hashtag: DAILY_HASHTAG,
+        uploadsLeft: Math.max(0, limit - used),
+        uploadsMax: limit,
         resetsAt: dayEndsAt(),
         postedToday: u.lastPostDay === today,
       },
       streak: { days: liveStreak(u, today), bonus: streakBonus(liveStreak(u, today) + (u.lastPostDay === today ? 0 : 1)) },
       lastResult: u.lastResult && !u.lastResult.seen ? { ...u.lastResult, leagueInfo: LEAGUES[u.lastResult.newLeague] } : null,
       crew: crew ? { id: crew.id, name: crew.name, code: crew.code } : null,
+      rivals: lobby ? rivalInfo(d, u, lobby, points) : { ahead: null, overtakenBy: [] },
+      invite: {
+        code: u.id,
+        url: `${publicUrl}/i/${encodeURIComponent(u.id)}`,
+        invited: (u.referrals ?? []).length,
+        active: activeReferrals(d, u),
+        bonus: Math.min(REFERRAL_BONUS_MAX, activeReferrals(d, u)),
+        max: REFERRAL_BONUS_MAX,
+      },
       badges: u.badges.slice(-12).reverse(),
       stats: { videos: u.videos, bestScore: u.bestScore },
       recent: d.videos
@@ -294,6 +378,26 @@ export async function profile(user: User) {
         .reverse(),
     };
   });
+}
+
+/** Le joueur juste devant moi + ceux qui m'ont dépassé depuis ma dernière visite de la ligue. */
+function rivalInfo(d: DB, u: User, lobby: Lobby, points: Map<string, number>) {
+  const ranked = rankLobby(d, lobby, points).filter((id) => id === u.id || visibleTo(u)(d.users[id]));
+  const myIndex = ranked.indexOf(u.id);
+  const aheadId = myIndex > 0 ? ranked[myIndex - 1] : undefined;
+  const nowAhead = ranked.slice(0, Math.max(0, myIndex));
+  const before = u.aheadSnapshot?.week === lobby.week ? new Set(u.aheadSnapshot.ids) : undefined;
+  return {
+    ahead: aheadId
+      ? { pseudo: d.users[aheadId].pseudo, gap: (points.get(aheadId) ?? 0) - (points.get(u.id) ?? 0) + 1 }
+      : null,
+    overtakenBy: before ? nowAhead.filter((id) => !before.has(id)).map((id) => d.users[id].pseudo).slice(0, 3) : [],
+  };
+}
+
+function snapshotAhead(d: DB, u: User, lobby: Lobby, points: Map<string, number>) {
+  const ranked = rankLobby(d, lobby, points);
+  u.aheadSnapshot = { week: lobby.week, ids: ranked.slice(0, Math.max(0, ranked.indexOf(u.id))) };
 }
 
 export async function markResultSeen(user: User) {
@@ -307,13 +411,21 @@ export async function markResultSeen(user: User) {
 
 export async function assertCanUpload(user: User) {
   const today = dayKey();
-  const used = await db.read((d) => d.videos.filter((v) => v.userId === user.id && v.day === today).length);
-  if (used >= DAILY_UPLOADS) {
-    throw new AuraError(`T'as utilisé tes ${DAILY_UPLOADS} vidéos du jour. Reviens demain pour farmer plus d'aura !`, 429);
+  const { used, limit } = await db.read((d) => ({ used: usedToday(d, user.id, today), limit: dailyLimit(d, d.users[user.id]) }));
+  if (used >= limit) {
+    throw new AuraError(
+      `T'as utilisé tes ${limit} vidéos du jour. Reviens demain, ou invite un pote pour +1 vidéo par jour !`,
+      429,
+    );
   }
 }
 
-export async function recordVideo(user: User, a: VideoAura, cover: { consent: boolean; image?: string }) {
+export async function recordVideo(
+  user: User,
+  a: VideoAura,
+  cover: { consent: boolean; image?: string },
+  challengeCode?: string,
+) {
   return db.mutate((d) => {
     const u = d.users[user.id];
     const now = Date.now();
@@ -374,6 +486,8 @@ export async function recordVideo(user: User, a: VideoAura, cover: { consent: bo
 
     const after = weeklyPoints(d, week);
     const ranked = rankLobby(d, lobby, after);
+    snapshotAhead(d, u, lobby, after);
+    const challenge = challengeCode ? answerChallenge(d, u, video, challengeCode) : null;
     const weekVideos = d.videos.filter((v) => v.userId === u.id && v.week === week).map((v) => v.points);
     const counted = [...weekVideos].sort((x, y) => y - x).slice(0, BEST_OF);
 
@@ -387,7 +501,8 @@ export async function recordVideo(user: User, a: VideoAura, cover: { consent: bo
       rankAfter: ranked.indexOf(u.id) + 1,
       lobbySize: ranked.length,
       streak: u.streak,
-      uploadsLeft: Math.max(0, DAILY_UPLOADS - d.videos.filter((v) => v.userId === u.id && v.day === today).length),
+      uploadsLeft: Math.max(0, dailyLimit(d, u) - usedToday(d, u.id, today)),
+      challenge,
     };
   });
 }
@@ -396,7 +511,7 @@ export async function recordVideo(user: User, a: VideoAura, cover: { consent: bo
 
 /** Mon groupe de ligue de la semaine, avec les zones de montée et de descente. */
 export async function lobbyView(user: User) {
-  return db.read((d) => {
+  return db.mutate((d) => {
     const u = d.users[user.id];
     const week = weekKey();
     const lobby = u.lobby?.week === week ? d.lobbies[u.lobby.id] : undefined;
@@ -411,6 +526,7 @@ export async function lobbyView(user: User) {
     const ranked = rankLobby(d, lobby, points);
     const z = zones(ranked.length, lobby.league);
     const show = visibleTo(u);
+    snapshotAhead(d, u, lobby, points); // base des alertes « il t'a dépassé »
     return {
       ...base,
       joined: true,
@@ -466,20 +582,24 @@ function leaveCrewIn(d: DB, u: User) {
   else if (crew.ownerId === u.id) crew.ownerId = crew.members[0];
 }
 
-// Sans 0/O ni 1/I/L : facile à recopier à l'oral ou depuis une story.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function normalizeCity(raw: unknown) {
+  const city = typeof raw === "string" ? raw.trim().replace(/\s+/g, " ").slice(0, 40) : "";
+  return city ? city.charAt(0).toUpperCase() + city.slice(1).toLowerCase() : undefined;
+}
+const sameCity = (a?: string | null, b?: string | null) => !!a && !!b && pseudoId(a) === pseudoId(b);
 
-export async function createCrew(user: User, rawName: unknown) {
+export async function createCrew(user: User, rawName: unknown, rawKind?: unknown, rawCity?: unknown) {
+  const kind: CrewKind = rawKind === "school" ? "school" : "friends";
+  const city = normalizeCity(rawCity);
+  if (kind === "school" && !city) throw new AuraError("Indique la ville de ton établissement.");
   const name = typeof rawName === "string" ? rawName.trim().replace(/\s+/g, " ") : "";
   if (name.length < 3 || name.length > 24) throw new AuraError("Nom du crew : 3 à 24 caractères.");
   if (BANNED.some((w) => pseudoId(name).replace(/_/g, "").includes(w))) throw new AuraError("Ce nom n'est pas autorisé.");
   return db.mutate((d) => {
     const u = d.users[user.id];
     leaveCrewIn(d, u);
-    let code: string;
-    do code = Array.from(randomBytes(6), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
-    while (Object.values(d.crews).some((c) => c.code === code));
-    const crew: Crew = { id: randomUUID(), name, code, ownerId: u.id, members: [u.id], createdAt: Date.now() };
+    const code = newCode((c) => Object.values(d.crews).some((crew) => crew.code === c));
+    const crew: Crew = { id: randomUUID(), name, code, ownerId: u.id, members: [u.id], createdAt: Date.now(), kind, city };
     d.crews[crew.id] = crew;
     u.crewId = crew.id;
     return { id: crew.id, name, code };
@@ -512,10 +632,19 @@ export async function crewView(user: User) {
     const points = weeklyPoints(d, week);
     const crewPoints = (c: Crew) => c.members.reduce((s, id) => s + (points.get(id) ?? 0), 0);
     const ranking = Object.values(d.crews)
-      .map((c) => ({ id: c.id, name: c.name, members: c.members.length, points: crewPoints(c) }))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        members: c.members.length,
+        points: crewPoints(c),
+        kind: c.kind ?? "friends",
+        city: c.city ?? null,
+      }))
       .sort((a, b) => b.points - a.points);
     const me = d.users[user.id];
     const mine = me.crewId ? d.crews[me.crewId] : undefined;
+    const ranked = <T extends { id: string }>(list: T[]) =>
+      list.slice(0, 50).map((c, i) => ({ ...c, rank: i + 1, isMine: c.id === mine?.id }));
     const show = visibleTo(me);
 
     return {
@@ -525,6 +654,8 @@ export async function crewView(user: User) {
             id: mine.id,
             name: mine.name,
             code: mine.code,
+            kind: mine.kind ?? "friends",
+            city: mine.city ?? null,
             rank: ranking.findIndex((c) => c.id === mine.id) + 1,
             points: crewPoints(mine),
             members: mine.members
@@ -534,7 +665,115 @@ export async function crewView(user: User) {
               .sort((a, b) => b.points - a.points),
           }
         : null,
-      top: ranking.slice(0, 50).map((c, i) => ({ ...c, rank: i + 1, isMine: c.id === mine?.id })),
+      top: ranked(ranking),
+      // « Le lycée avec le plus d'aura » : établissements seulement, en France puis dans ma ville.
+      schools: ranked(ranking.filter((c) => c.kind === "school")),
+      city: mine?.city
+        ? { name: mine.city, crews: ranked(ranking.filter((c) => c.kind === "school" && sameCity(c.city, mine.city))) }
+        : null,
+    };
+  });
+}
+
+// ---------- Défis 1v1 par lien ----------
+
+function challengePublic(d: DB, c: Challenge) {
+  const from = d.users[c.fromId];
+  return {
+    code: c.code,
+    from: from ? { pseudo: from.pseudo, league: LEAGUES[from.league] } : null,
+    score: c.score,
+    tier: c.tier,
+    title: c.title,
+    emoji: c.emoji,
+    auraColor: c.auraColor,
+    auraColor2: c.auraColor2,
+    expiresAt: c.expiresAt,
+    expired: Date.now() > c.expiresAt,
+    answers: c.answers.length,
+    beaten: c.answers.filter((x) => x.won).length,
+  };
+}
+
+/** Crée (ou réutilise) le défi lié à une de mes vidéos. */
+export async function createChallenge(user: User, videoId: unknown) {
+  return db.mutate((d) => {
+    const video = d.videos.find((v) => v.id === videoId && v.userId === user.id);
+    if (!video || video.points === 0) throw new AuraError("Vidéo introuvable.", 404);
+    const existing = Object.values(d.challenges).find((c) => c.videoId === video.id && Date.now() < c.expiresAt);
+    if (existing) return challengePublic(d, existing);
+    const u = d.users[user.id];
+    const challenge: Challenge = {
+      code: newCode((c) => !!d.challenges[c]),
+      fromId: u.id,
+      videoId: video.id,
+      score: video.score,
+      tier: video.tier,
+      title: video.title,
+      emoji: video.emoji,
+      auraColor: u.auraColor,
+      auraColor2: u.auraColor2,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + CHALLENGE_TTL_MS,
+      answers: [],
+    };
+    d.challenges[challenge.code] = challenge;
+    return challengePublic(d, challenge);
+  });
+}
+
+export async function challengeInfo(rawCode: unknown) {
+  const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+  return db.read((d) => (d.challenges[code] ? challengePublic(d, d.challenges[code]) : null));
+}
+
+/** Infos publiques d'un joueur pour sa page d'invitation. */
+export async function inviterInfo(rawId: unknown) {
+  const id = typeof rawId === "string" ? pseudoId(decodeURIComponent(rawId)) : "";
+  return db.read((d) => {
+    const u = d.users[id];
+    if (!u || u.hidden) return null;
+    return { code: u.id, pseudo: u.pseudo, league: LEAGUES[u.league], bestScore: u.bestScore, tier: u.tier, auraColor: u.auraColor, auraColor2: u.auraColor2 };
+  });
+}
+
+function answerChallenge(d: DB, u: User, video: Video, rawCode: string) {
+  const c = d.challenges[rawCode.trim().toUpperCase()];
+  if (!c || c.fromId === u.id || Date.now() > c.expiresAt || video.points === 0) return null;
+  const opponent = d.users[c.fromId];
+  if (!opponent) return null;
+  const won = video.score > c.score;
+  // On garde la meilleure réponse de chaque joueur.
+  const previous = c.answers.find((x) => x.userId === u.id);
+  if (!previous) c.answers.push({ userId: u.id, score: video.score, videoId: video.id, at: Date.now(), won });
+  else if (video.score > previous.score) Object.assign(previous, { score: video.score, videoId: video.id, at: Date.now(), won });
+  return { code: c.code, opponent: opponent.pseudo, opponentScore: c.score, myScore: video.score, won };
+}
+
+/** Mes défis envoyés (avec les réponses) et ceux auxquels j'ai répondu. */
+export async function myChallenges(user: User) {
+  return db.read((d) => {
+    const all = Object.values(d.challenges);
+    return {
+      sent: all
+        .filter((c) => c.fromId === user.id)
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 10)
+        .map((c) => ({
+          ...challengePublic(d, c),
+          results: c.answers
+            .filter((x) => d.users[x.userId])
+            .map((x) => ({ pseudo: d.users[x.userId].pseudo, score: x.score, won: x.won }))
+            .sort((a, b) => b.score - a.score),
+        })),
+      received: all
+        .filter((c) => c.answers.some((x) => x.userId === user.id))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 10)
+        .map((c) => {
+          const mine = c.answers.find((x) => x.userId === user.id)!;
+          return { ...challengePublic(d, c), myScore: mine.score, won: mine.won };
+        }),
     };
   });
 }

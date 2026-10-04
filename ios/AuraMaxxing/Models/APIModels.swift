@@ -66,6 +66,7 @@ struct WeekStatus: Codable, Hashable {
 struct Today: Codable, Hashable {
     let theme: String
     let hint: String
+    let hashtag: String
     let uploadsLeft: Int
     let uploadsMax: Int
     let resetsAt: Double
@@ -125,6 +126,8 @@ struct Profile: Codable {
     let streak: Streak
     let lastResult: WeekResult?
     let crew: CrewRef?
+    let rivals: Rivals
+    let invite: Invite
     let badges: [Badge]
     let stats: ProfileStats
     let recent: [VideoRecord]
@@ -135,6 +138,67 @@ struct Profile: Codable {
 struct RegisterResponse: Codable {
     let token: String
     let user: Player
+    let invitedBy: String?
+}
+
+/// Le joueur juste devant moi + ceux qui m'ont dépassé depuis ma dernière visite de la ligue.
+struct Rivals: Codable, Hashable {
+    let ahead: Ahead?
+    let overtakenBy: [String]
+    struct Ahead: Codable, Hashable { let pseudo: String; let gap: Int }
+}
+
+/// Parrainage : chaque pote qui joue donne +1 vidéo par jour (plafonné).
+struct Invite: Codable, Hashable {
+    let code: String
+    let url: String
+    let invited: Int
+    let active: Int
+    let bonus: Int
+    let max: Int
+}
+
+// MARK: - Défis 1v1
+
+struct ChallengeInfo: Codable, Hashable, Identifiable {
+    let code: String
+    let from: ChallengeFrom?
+    let score: Int
+    let tier: String
+    let title: String
+    let emoji: String
+    let auraColor: String
+    let auraColor2: String
+    let expiresAt: Double
+    let expired: Bool
+    let answers: Int
+    let beaten: Int
+    // Création
+    var url: String?
+    var shareText: String?
+    // Mes défis envoyés / reçus
+    var results: [ChallengeAnswer]?
+    var myScore: Int?
+    var won: Bool?
+
+    var id: String { code }
+
+    struct ChallengeFrom: Codable, Hashable { let pseudo: String; let league: LeagueInfo }
+    struct ChallengeAnswer: Codable, Hashable { let pseudo: String; let score: Int; let won: Bool }
+}
+
+struct MyChallenges: Codable {
+    let sent: [ChallengeInfo]
+    let received: [ChallengeInfo]
+}
+
+/// Résultat d'une réponse à un défi (renvoyé avec l'analyse).
+struct ChallengeOutcome: Codable, Hashable {
+    let code: String
+    let opponent: String
+    let opponentScore: Int
+    let myScore: Int
+    let won: Bool
 }
 
 struct LeagueBoard: Codable {
@@ -158,11 +222,17 @@ struct CrewBoard: Codable {
     let week: WeekStatus
     let crew: MyCrew?
     let top: [CrewRow]
+    let schools: [CrewRow]
+    let city: CityRanking?
+
+    struct CityRanking: Codable { let name: String; let crews: [CrewRow] }
 
     struct MyCrew: Codable {
         let id: String
         let name: String
         let code: String
+        let kind: String
+        let city: String?
         let rank: Int
         let points: Int
         let members: [Player]
@@ -175,6 +245,8 @@ struct CrewBoard: Codable {
         let points: Int
         let rank: Int
         let isMine: Bool
+        let kind: String
+        let city: String?
     }
 }
 
@@ -210,12 +282,14 @@ struct UploadResult: Codable {
     let lobbySize: Int
     let streak: Int
     let uploadsLeft: Int
+    let challenge: ChallengeOutcome?
 }
 
 // MARK: - Corps de requêtes
 
-struct RegisterBody: Encodable { let pseudo: String }
-struct CrewNameBody: Encodable { let name: String }
+struct RegisterBody: Encodable { let pseudo: String; let ref: String? }
+struct CrewNameBody: Encodable { let name: String; let kind: String; let city: String }
+struct ChallengeBody: Encodable { let videoId: String }
 struct CrewCodeBody: Encodable { let code: String }
 struct UserIdBody: Encodable { let userId: String }
 struct EmptyBody: Encodable {}
@@ -228,4 +302,5 @@ struct VideoBody: Encodable {
     let caption: String
     let coverConsent: Bool
     let cover: String?
+    let challengeCode: String?
 }

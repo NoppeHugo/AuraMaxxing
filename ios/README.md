@@ -2,7 +2,7 @@
 
 > Tu postes une vidéo, l'IA te donne un score d'aura sur 1000, et chaque semaine tu affrontes 30 joueurs de ton niveau.
 
-> ⚠️ **Code non compilé ici.** Le code a été écrit hors Mac/Xcode (environnement Linux), comme pour VlogMe. La syntaxe des 26 fichiers Swift est validée par un parseur, mais pas les types : attends-toi à quelques petits ajustements au premier build.
+> ⚠️ **Code non compilé ici.** Le code a été écrit hors Mac/Xcode (environnement Linux), comme pour VlogMe. La syntaxe des 29 fichiers Swift est validée par un parseur, mais pas les types : attends-toi à quelques petits ajustements au premier build.
 
 ## Le concept du classement : les Ligues d'aura
 
@@ -25,6 +25,22 @@ Un classement mondial unique décourage tout le monde sauf le top 10 : impossibl
 | **Rappels locaux** | Thème du jour (17h30), série en danger (21h), fin de saison (dimanche 18h) | Ramène les joueurs sans serveur de push. |
 
 Toutes ces valeurs se règlent dans `lib/league/rules.ts` côté backend.
+
+## Les leviers de viralité
+
+| Levier | Où | Comment ça marche |
+|---|---|---|
+| 🎬 **Vidéo de révélation** | Résultat → « Créer ma vidéo d'aura » | `RevealVideoExporter` : la vidéo de la personne en 9:16 + habillage animé (scan laser, score qui défile, tier, titre, roast, logo, #AuraDuJour). Prête à poster sur TikTok / Reels / Snap : chaque post est une pub. |
+| ⚔️ **Défi 1v1 par lien** | Résultat → « Défier un pote » | Crée un code (`/d/K7XP2M`). Le pote voit une page avec aperçu du score, installe l'app, poste sa vidéo : l'app compare et affiche « T'as battu @leo ». Valable 72 h, plusieurs potes peuvent répondre. |
+| 🎁 **Parrainage** | Accueil → « Inviter des potes » | Chaque pote invité qui poste sa 1re vidéo = **+1 vidéo par jour** (jusqu'à +3). Comme la limite de 3 vidéos frustre, inviter devient la façon naturelle d'en avoir plus. |
+| 🏫 **Lycée avec le plus d'aura** | Crew → Lycées / Ma ville | Crews « établissement » avec ville : classement des lycées de France et de ta ville. |
+| 😤 **Alertes de rivalité** | Accueil | « @leo t'a dépassé · il te manque 40 pts » (calculé depuis ta dernière visite de la ligue). |
+| 📱 **Widget** | Écran d'accueil / verrouillé | Rang, points, série, fin de saison, et qui est juste devant. |
+| #️⃣ **#AuraDuJour** | Partout | Hashtag commun dans la vidéo, les textes de partage et le thème du jour. |
+
+**Liens de défi et d'invitation** : le pote clique sur `https://ton-site/d/CODE`. La page (servie par le backend Next.js) montre l'aperçu, copie le code dans le presse-papiers et ouvre l'App Store. Au premier lancement, l'écran d'inscription a un bouton « Coller » (`PasteButton`, sans pop-up d'autorisation) : le défi et le parrainage sont rattachés. Si l'app est déjà installée, le bouton « J'ai déjà l'app » ouvre `auramaxxing://challenge/CODE`.
+
+> Pour aller plus loin : activer les **liens universels** (Associated Domains + fichier `apple-app-site-association` sur le site) pour que les liens `https://…/d/CODE` ouvrent directement l'app.
 
 ## Comment marche l'analyse vidéo
 
@@ -65,6 +81,8 @@ open AuraMaxxing.xcodeproj
 - **Public jeune** : case « 13 ans ou plus » à l'inscription. Vérifie les obligations RGPD pour les mineurs (consentement parental sous 15 ans en France) avec un juriste avant le lancement.
 - **Comptes** : pour l'instant, un compte anonyme par appareil (jeton dans le trousseau). Ajouter *Sign in with Apple* permettra de récupérer son compte sur un nouveau téléphone.
 - **Icône** : ajoute ton icône 1024×1024 dans `Assets.xcassets/AppIcon.appiconset`.
+- **Widget** : crée l'App Group `group.com.hugonoppe.auramaxxing` dans ton compte Apple Developer (Identifiers → App Groups) et coche-le pour l'app et le widget.
+- **Liens** : renseigne `AURA_PUBLIC_URL` et `AURA_APP_STORE_URL` côté backend une fois l'app publiée.
 - **Backend** : le stockage JSON convient au prototype. Pour la prod, passer `lib/league/store.ts` sur Postgres/Supabase.
 
 ## Architecture
@@ -73,7 +91,7 @@ open AuraMaxxing.xcodeproj
 AuraMaxxing/
 ├─ App/          AuraMaxxingApp · RootView (onglets, écran de fin de semaine)
 ├─ Models/       APIModels (miroir du JSON de l'API v1)
-├─ Services/     APIClient · SessionStore · KeychainStore · FrameExtractor · Reminders · Analytics (PostHog) · Haptics
+├─ Services/     APIClient · SessionStore · KeychainStore · FrameExtractor · RevealVideoExporter · Reminders · Analytics (PostHog) · Haptics
 └─ Views/
    ├─ Onboarding/  3 slides + pseudo + règles
    ├─ Home/        accueil
@@ -82,4 +100,6 @@ AuraMaxxing/
    ├─ Crew/        CrewView
    ├─ Profile/     ProfileView
    └─ Components/  AuraBackground · ParticleField · ConfettiView · CountingText · AvatarView · Theme
+AuraWidget/      Widget (écran d'accueil + écran verrouillé)
+Shared/          WidgetSnapshot (données partagées app ↔ widget via App Group)
 ```

@@ -16,6 +16,8 @@ struct AuraMaxxingApp: App {
                 .environmentObject(session)
                 .preferredColorScheme(.dark)
                 .tint(.auraPurple)
+                // Liens de défi / d'invitation (auramaxxing://challenge/CODE, auramaxxing://invite/PSEUDO)
+                .onOpenURL { session.handle(url: $0) }
         }
     }
 }

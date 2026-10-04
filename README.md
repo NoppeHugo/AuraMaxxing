@@ -70,6 +70,10 @@ lib/
 | `POST /report`, `POST /block` | Modération |
 | `POST /result-seen` | Marque le résultat de fin de semaine comme vu |
 | `GET /theme` | Thème du jour |
+| `POST /challenges` · `GET /challenges` | Créer un défi à partir d'une vidéo (lien + texte à partager) · mes défis envoyés et reçus |
+| `GET /challenges/:code` | Infos publiques d'un défi |
+
+Pages web servies pour les liens partagés depuis l'app : `/d/CODE` (défi, avec image d'aperçu générée pour Snap/iMessage/Insta) et `/i/PSEUDO` (invitation). Variables : `AURA_PUBLIC_URL`, `AURA_APP_STORE_URL`.
 
 Les règles du jeu (taille des groupes, bonus, limites) sont dans `lib/league/rules.ts`.
 
@@ -79,4 +83,4 @@ Le stockage JSON convient à un seul serveur (VPS, Railway, Render, Fly.io avec 
 
 La même chose vaut pour `lib/league/store.ts` (backend de l'app iOS).
 
-Pistes pour la suite : Sign in with Apple, battles 1v1 en vidéo par lien d'invitation, modération humaine des profils signalés.
+Pistes pour la suite : Sign in with Apple, liens universels, notifications push de rivalité, modération humaine des profils signalés.

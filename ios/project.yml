@@ -23,6 +23,7 @@ targets:
     platform: iOS
     sources:
       - path: AuraMaxxing
+      - path: Shared
     settings:
       base:
         INFOPLIST_FILE: AuraMaxxing/Resources/Info.plist
@@ -31,6 +32,8 @@ targets:
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # App Group partagé avec le widget (compte Apple Developer requis).
+        CODE_SIGN_ENTITLEMENTS: AuraMaxxing/Resources/AuraMaxxing.entitlements
         # DEVELOPMENT_TEAM: XXXXXXXXXX        # ← ton Team ID, ou signature automatique dans Xcode
       configs:
         Debug:
@@ -39,3 +42,21 @@ targets:
           AURA_API_URL: "https://api.auramaxxing.app"   # ← l'URL de ton backend déployé
     dependencies:
       - package: PostHog
+      - target: AuraWidgetExtension
+
+  # Widget écran d'accueil / écran verrouillé : rang dans la ligue, série, fin de saison.
+  AuraWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AuraWidget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hugonoppe.auramaxxing.widget
+        INFOPLIST_FILE: AuraWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: AuraWidget/AuraWidget.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
