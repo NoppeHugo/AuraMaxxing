@@ -1,5 +1,7 @@
 # AuraMaxxing ⚡ Battle d'aura
 
+> **📱 App iOS** : voir [`ios/README.md`](ios/README.md). Tu postes une vidéo, l'IA te donne un score d'aura, et chaque semaine tu joues dans des **Ligues d'aura** (groupes de 30, montées et descentes, thème du jour, séries, crews). Le serveur Next.js de ce repo sert de backend à l'app via `/api/v1/*` (code dans `lib/league/`).
+
 App web où les jeunes font noter leur **aura** par l'IA (Claude), s'affrontent en **battles 1v1** et grimpent au **classement**. L'app analyse aussi les **trends** mode/lifestyle détectées dans toutes les photos (Old Money, Streetwear, Y2K, Gorpcore, Opium…).
 
 ## Fonctionnalités
@@ -55,8 +57,26 @@ lib/
   shareCard.ts          génération de la carte d'aura 1080×1920
 ```
 
+## API mobile (`/api/v1`)
+
+| Route | Rôle |
+|---|---|
+| `POST /register` | Crée un compte anonyme (pseudo) et renvoie un jeton |
+| `GET /me` · `DELETE /me` | Profil (ligue, semaine, thème du jour, série, vidéos restantes) · suppression du compte |
+| `POST /videos` | Images clés d'une vidéo → analyse IA + points de ligue |
+| `GET /league` | Mon groupe de la semaine avec les zones de montée et de descente |
+| `GET /global` | Meilleures vidéos de la semaine + légendes |
+| `GET/POST /crew`, `POST /crew/join`, `POST /crew/leave` | Crews |
+| `POST /report`, `POST /block` | Modération |
+| `POST /result-seen` | Marque le résultat de fin de semaine comme vu |
+| `GET /theme` | Thème du jour |
+
+Les règles du jeu (taille des groupes, bonus, limites) sont dans `lib/league/rules.ts`.
+
 ## Mettre en production
 
 Le stockage JSON convient à un seul serveur (VPS, Railway, Render, Fly.io avec un volume). Sur un hébergement serverless comme Vercel, le disque n'est pas persistant : il faut remplacer `lib/store.ts` par une vraie base (Supabase/Postgres, Firestore…). Les fonctions exportées restent les mêmes, donc le reste de l'app ne change pas.
 
-Pistes pour la suite : comptes utilisateurs (pour qu'on ne puisse pas jouer sous le pseudo de quelqu'un d'autre), battles à distance par lien d'invitation, saisons de classement, modération des pseudos, et une version mobile (PWA ou React Native).
+La même chose vaut pour `lib/league/store.ts` (backend de l'app iOS).
+
+Pistes pour la suite : Sign in with Apple, battles 1v1 en vidéo par lien d'invitation, modération humaine des profils signalés.

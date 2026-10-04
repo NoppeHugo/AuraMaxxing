@@ -151,9 +151,7 @@ struct LeagueView: View {
                 .font(.caption).foregroundStyle(Color.auraMuted)
             if players.isEmpty { emptyState("Personne n'a encore posté cette semaine.") }
             ForEach(Array(players.enumerated()), id: \.element.rowID) { i, p in
-                var ranked = p
-                let _ = (ranked.rank = i + 1)
-                row(ranked, value: p.score ?? 0, unit: scoreLabel, subtitle: "\(p.emoji) \(p.title)")
+                row(withRank(p, i + 1), value: p.score ?? 0, unit: scoreLabel, subtitle: "\(p.emoji) \(p.title)")
             }
         }
     }
@@ -199,6 +197,12 @@ struct LeagueView: View {
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(me ? Color.auraPurple : Color.clear, lineWidth: 1.5))
         .contentShape(Rectangle())
         .onLongPressGesture { if !me { Haptics.tap(); reportTarget = p } }
+    }
+
+    private func withRank(_ p: Player, _ rank: Int) -> Player {
+        var copy = p
+        copy.rank = rank
+        return copy
     }
 
     private func zoneDivider(_ text: String, _ color: Color) -> some View {

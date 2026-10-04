@@ -54,7 +54,7 @@ struct WeekResultView: View {
             .padding(24)
         }
         .onAppear {
-            result.outcome == .down ? Haptics.error() : Haptics.success()
+            if result.outcome == .down { Haptics.error() } else { Haptics.success() }
             withAnimation(.spring(response: 0.7, dampingFraction: 0.5)) { shown = true }
         }
     }
